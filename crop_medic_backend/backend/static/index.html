@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#050b14">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/static/style.css">
+  <title>Crop Medic</title>
+</head>
+<body>
+  <header>
+    <h1>CROP MEDIC</h1>
+    <p class="sub">AI PLANT HEALTH SCANNER</p>
+    <select id="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="sn">Shona</option>
+      <option value="nd">Ndebele</option>
+    </select>
+  </header>
+
+  <main>
+    <section id="scan">
+      <div id="frame">
+        <img id="preview" alt="" hidden>
+        <p id="hint">Place one leaf inside the frame</p>
+      </div>
+      <p class="tip">Tip: shoot in daylight, no shadows.</p>
+      <label class="btn" for="photo">SCAN LEAF</label>
+      <input id="photo" type="file" accept="image/*" capture="environment" hidden>
+    </section>
+
+    <section id="result" hidden>
+      <h2 id="disease"></h2>
+      <p id="meta"></p>
+      <div class="bar"><div id="fill"></div></div>
+      <p id="warning" hidden>Not very sure about this one. Please confirm with an extension officer.</p>
+      <h3>What to do</h3>
+      <ul id="advice"></ul>
+    </section>
+
+    <p id="status" role="status"></p>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{
+  "_default": {
+    "en": [
+      "Isolate or mark the affected plants.",
+      "Take the leaf photo to your nearest agricultural extension officer to confirm.",
+      "Avoid moving plant material from affected plants to healthy ones."
+    ],
+    "sn": [],
+    "nd": []
+  },
+  "_healthy": {
+    "en": [
+      "The leaf looks healthy.",
+      "Keep scouting your field regularly, especially after rain."
+    ],
+    "sn": [],
+    "nd": []
+  },
+  "Corn_(maize)___Northern_Leaf_Blight": {
+    "en": [
+      "Remove badly affected leaves.",
+      "Ask your agro-dealer about a recommended fungicide.",
+      "Rotate crops next season and avoid planting maize in the same field."
+    ],
+    "sn": [],
+    "nd": []
+  },
+  "Corn_(maize)___Common_rust_": {
+    "en": [
+      "Monitor how fast the rust spreads to new leaves.",
+      "Ask your agro-dealer about a suitable fungicide if spread is fast.",
+      "Plant resistant varieties next season."
+    ],
+    "sn": [],
+    "nd": []
+  },
+  "Tomato___Early_blight": {
+    "en": [
+      "Remove lower infected leaves.",
+      "Water at the base of the plant, not over the leaves.",
+      "Ask your agro-dealer about a recommended fungicide."
+    ],
+    "sn": [],
+    "nd": []
+  },
+  "Tomato___Late_blight": {
+    "en": [
+      "Remove and destroy infected plants quickly, it spreads fast in wet weather.",
+      "Do not compost infected material.",
+      "Ask your agro-dealer about a recommended fungicide."
+    ],
+    "sn": [],
+    "nd": []
+  }
+}
