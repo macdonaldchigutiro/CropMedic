@@ -193,6 +193,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
   }
 
   Widget _weatherCard(WeatherSnapshot w) {
+    final dayCount = w.maxTemps.length < 3 ? w.maxTemps.length : 3;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,10 +226,10 @@ class _WeatherScreenState extends State<WeatherScreen> {
           const Text('Next 3 days', style: TextStyle(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
           Row(
-            children: List.generate(w.maxTemps.length.clamp(0, 3), (i) {
+            children: List.generate(dayCount, (i) {
               return Expanded(
                 child: Container(
-                  margin: EdgeInsets.only(right: i == 2 ? 0 : 7),
+                  margin: EdgeInsets.only(right: i == dayCount - 1 ? 0 : 7),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(color: Palette.primarySoft, borderRadius: BorderRadius.circular(14)),
                   child: Column(
