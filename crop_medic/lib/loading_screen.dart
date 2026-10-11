@@ -3,12 +3,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import 'brand.dart';
+import 'localization.dart';
 import 'theme.dart';
 
 class LoadingScreen extends StatelessWidget {
   final Uint8List image;
+  final String lang;
 
-  const LoadingScreen({super.key, required this.image});
+  const LoadingScreen({super.key, required this.image, required this.lang});
+
+  String tr(String key) => AppText.t(lang, key);
 
   @override
   Widget build(BuildContext context) {
@@ -51,10 +55,10 @@ class LoadingScreen extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 34),
-                    const Text(
-                      'Checking your leaf...',
+                    Text(
+                      tr('checkingLeaf'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 31,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
@@ -63,25 +67,25 @@ class LoadingScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'This takes a few seconds.',
-                      style: TextStyle(
+                    Text(
+                      tr('takesSeconds'),
+                      style: const TextStyle(
                         color: Palette.textDim,
                         fontSize: 16,
                       ),
                     ),
                     const SizedBox(height: 28),
-                    const _ProgressStep(
+                    _ProgressStep(
                       icon: Icons.search_rounded,
-                      text: 'Analysing leaf image',
+                      text: tr('analysingLeaf'),
                     ),
-                    const _ProgressStep(
+                    _ProgressStep(
                       icon: Icons.auto_awesome_rounded,
-                      text: 'Looking for crop problems',
+                      text: tr('lookingProblems'),
                     ),
-                    const _ProgressStep(
+                    _ProgressStep(
                       icon: Icons.spa_rounded,
-                      text: 'Finding practical advice',
+                      text: tr('findingAdvice'),
                     ),
                     const Spacer(),
                   ],
