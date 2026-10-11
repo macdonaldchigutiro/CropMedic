@@ -45,63 +45,36 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 620),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 96),
-                children: [
-                  _header(),
-                  const SizedBox(height: 20),
-                  _hero(),
-                  const SizedBox(height: 16),
-                  PrimaryActionButton(
-                    label: 'Scan a leaf',
-                    icon: Icons.camera_alt_rounded,
-                    onPressed: _busy ? null : _openScan,
-                  ),
-                  const SizedBox(height: 11),
-                  SecondaryActionButton(
-                    label: 'Upload photo',
-                    icon: Icons.photo_library_rounded,
-                    onPressed: _busy ? null : _pickGallery,
-                  ),
-                  const SizedBox(height: 14),
-                  _supportedCrops(),
-                  const SizedBox(height: 26),
-                  _howItWorks(),
-                  const SizedBox(height: 18),
-                  _photoTips(),
-                ],
+              constraints: const BoxConstraints(maxWidth: 470),
+              child: Container(
+                color: Palette.bg.withOpacity(0.94),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                        children: [
+                          _header(),
+                          const SizedBox(height: 18),
+                          _hero(),
+                          const SizedBox(height: 14),
+                          _mainActions(),
+                          const SizedBox(height: 13),
+                          _supportedCrops(),
+                          const SizedBox(height: 26),
+                          _sectionHeader('How it works'),
+                          const SizedBox(height: 12),
+                          _howItWorks(),
+                          const SizedBox(height: 18),
+                          _bottomCards(),
+                        ],
+                      ),
+                    ),
+                    _bottomNav(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Palette.surface,
-            border: Border(top: BorderSide(color: Palette.border)),
-          ),
-          child: NavigationBar(
-            selectedIndex: 0,
-            backgroundColor: Palette.surface,
-            indicatorColor: Palette.primarySoft,
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-              NavigationDestination(icon: Icon(Icons.camera_alt_outlined), label: 'Scan'),
-              NavigationDestination(icon: Icon(Icons.history_rounded), label: 'History'),
-              NavigationDestination(icon: Icon(Icons.help_outline_rounded), label: 'Help'),
-            ],
-            onDestinationSelected: (index) {
-              if (index == 1) {
-                _openScan();
-              } else if (index == 2 || index == 3) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(index == 2 ? 'History is coming next.' : 'Help is coming next.')),
-                );
-              }
-            },
           ),
         ),
       ),
@@ -110,9 +83,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _header() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const CropMedicBrand(compact: true, showTagline: false),
-        const Spacer(),
+        const Expanded(
+          child: CropMedicBrand(compact: true, showTagline: false),
+        ),
+        const SizedBox(width: 8),
         LanguagePill(
           value: _lang,
           enabled: !_busy,
@@ -125,131 +101,315 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _hero() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 26, 22, 24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF0F4DD), Color(0xFFE5F0DF), Color(0xFFF7EBC8)],
-        ),
-        boxShadow: const [
-          BoxShadow(color: Color(0x100A2E20), blurRadius: 26, offset: Offset(0, 10)),
-        ],
-      ),
-      child: Stack(
-        children: [
-          const Positioned(
-            right: -8,
-            bottom: -14,
-            child: Icon(Icons.eco_rounded, size: 150, color: Color(0x594E955D)),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 90),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Healthy crops start with one photo',
-                  style: TextStyle(
-                    fontSize: 34,
-                    height: 1.04,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.1,
-                    color: Palette.primaryDark,
+    const imageUrl =
+        'https://images.unsplash.com/photo-1762610744861-493bc400e80f?auto=format&fit=crop&w=1200&q=85';
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: SizedBox(
+        height: 250,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+              errorBuilder: (_, __, ___) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE9F2DF), Color(0xFFF7E6B8)],
+                  ),
+                  child: const Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Icon(
+                        Icons.eco_rounded,
+                        size: 150,
+                        color: Color(0x664B8A56),
+                      ),
+                    ),
                   ),
                 ),
-                SizedBox(height: 12),
-                Text(
-                  'Find crop problems early and get practical guidance in seconds.',
-                  style: TextStyle(
-                    color: Palette.textDim,
-                    fontSize: 16,
-                    height: 1.45,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _supportedCrops() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Palette.surfaceSoft,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Palette.border),
-      ),
-      child: const Row(
-        children: [
-          _CropBadge(icon: Icons.grass_rounded, label: 'Maize'),
-          _CropBadge(icon: Icons.local_florist_rounded, label: 'Tomato'),
-          _CropBadge(icon: Icons.spa_rounded, label: 'Potato'),
-          _CropBadge(icon: Icons.eco_rounded, label: 'Pepper'),
-        ],
-      ),
-    );
-  }
-
-  Widget _howItWorks() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'How it works',
-          style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900, color: Palette.primaryDark),
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: const [
-            Expanded(child: _StepCard(number: '1', icon: Icons.camera_alt_rounded, title: 'Take photo', text: 'Snap one clear leaf.')),
-            SizedBox(width: 9),
-            Expanded(child: _StepCard(number: '2', icon: Icons.fact_check_rounded, title: 'Check result', text: 'See what we found.')),
-            SizedBox(width: 9),
-            Expanded(child: _StepCard(number: '3', icon: Icons.spa_rounded, title: 'Get guidance', text: 'Follow simple advice.')),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  stops: [0, 0.52, 1],
+                  colors: [
+                    Color(0xFFF7F7EFFF),
+                    Color(0xEEF3F5E7),
+                    Color(0x19FFFFFF),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: 245,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Healthy crops\nstart with\none photo',
+                        style: TextStyle(
+                          fontFamily: 'Georgia',
+                          color: Palette.primaryDark,
+                          fontSize: 34,
+                          height: 0.98,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -1.0,
+                        ),
+                      ),
+                      SizedBox(height: 13),
+                      Text(
+                        'Find crop problems early and get expert guidance in seconds.',
+                        style: TextStyle(
+                          color: Palette.textDim,
+                          fontSize: 15.5,
+                          height: 1.38,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _mainActions() {
+    return Column(
+      children: [
+        _BigAction(
+          icon: Icons.camera_alt_rounded,
+          title: _busy ? 'Checking photo…' : 'Scan a leaf',
+          primary: true,
+          onTap: _busy ? null : _openScan,
+        ),
+        const SizedBox(height: 10),
+        _BigAction(
+          icon: Icons.photo_library_rounded,
+          title: 'Upload photo',
+          onTap: _busy ? null : _pickGallery,
         ),
       ],
     );
   }
 
-  Widget _photoTips() {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text('Photo tips', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-          SizedBox(height: 14),
-          _TipRow(icon: Icons.wb_sunny_outlined, title: 'Good light', text: 'Take the photo in daylight.'),
-          _TipRow(icon: Icons.eco_rounded, title: 'Whole leaf', text: 'Show the entire leaf.'),
-          _TipRow(icon: Icons.center_focus_strong_rounded, title: 'Clear focus', text: 'Keep the leaf sharp.'),
+  Widget _supportedCrops() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F5EE),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Palette.border),
+      ),
+      child: const Row(
+        children: [
+          Expanded(child: _CropMini(emoji: '🌽', label: 'Maize')),
+          Expanded(child: _CropMini(emoji: '🍅', label: 'Tomato')),
+          Expanded(child: _CropMini(emoji: '🥔', label: 'Potato')),
+          Expanded(child: _CropMini(emoji: '🫑', label: 'Pepper')),
         ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontFamily: 'Georgia',
+        color: Palette.primaryDark,
+        fontSize: 27,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
+      ),
+    );
+  }
+
+  Widget _howItWorks() {
+    return Row(
+      children: const [
+        Expanded(
+          child: _StepCard(
+            number: '1',
+            icon: Icons.camera_alt_rounded,
+            title: 'Take photo',
+            text: 'Snap a clear leaf photo',
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: _StepCard(
+            number: '2',
+            icon: Icons.fact_check_rounded,
+            title: 'Check result',
+            text: 'Get an instant diagnosis',
+          ),
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: _StepCard(
+            number: '3',
+            icon: Icons.spa_rounded,
+            title: 'Get guidance',
+            text: 'Follow simple advice',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _bottomCards() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Expanded(child: _RecentResultCard()),
+        SizedBox(width: 10),
+        Expanded(child: _PhotoTipsCard()),
+      ],
+    );
+  }
+
+  Widget _bottomNav() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Palette.surface,
+        border: Border(top: BorderSide(color: Palette.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 14,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+      child: Row(
+        children: [
+          _NavItem(icon: Icons.home_rounded, label: 'Home', active: true),
+          _NavItem(icon: Icons.camera_alt_outlined, label: 'Scan', onTap: _openScan),
+          _NavItem(
+            icon: Icons.history_rounded,
+            label: 'History',
+            onTap: () => _placeholder('History is coming next.'),
+          ),
+          _NavItem(
+            icon: Icons.help_outline_rounded,
+            label: 'Help',
+            onTap: () => _placeholder('Help is coming next.'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _placeholder(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
+
+class _BigAction extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool primary;
+  final VoidCallback? onTap;
+
+  const _BigAction({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.primary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          height: 66,
+          decoration: BoxDecoration(
+            gradient: primary ? brandGradient : null,
+            color: primary ? null : Palette.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: primary ? Palette.primaryDark : Palette.primary,
+              width: primary ? 0 : 1.2,
+            ),
+            boxShadow: primary
+                ? const [
+                    BoxShadow(
+                      color: Color(0x25126044),
+                      blurRadius: 20,
+                      offset: Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: primary ? Colors.white : Palette.primaryDark, size: 27),
+              const SizedBox(width: 13),
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Georgia',
+                  color: primary ? Colors.white : Palette.primaryDark,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: 13),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: primary ? Colors.white : Palette.primaryDark,
+                size: 28,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _CropBadge extends StatelessWidget {
-  final IconData icon;
+class _CropMini extends StatelessWidget {
+  final String emoji;
   final String label;
-  const _CropBadge({required this.icon, required this.label});
+  const _CropMini({required this.emoji, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Palette.primary, size: 23),
-          const SizedBox(height: 3),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 25)),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+        ),
+      ],
     );
   }
 }
@@ -260,14 +420,19 @@ class _StepCard extends StatelessWidget {
   final String title;
   final String text;
 
-  const _StepCard({required this.number, required this.icon, required this.title, required this.text});
+  const _StepCard({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 13),
+      padding: const EdgeInsets.fromLTRB(9, 10, 9, 12),
       decoration: BoxDecoration(
-        color: Palette.surfaceSoft,
+        color: const Color(0xFFF2F6EE),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -276,54 +441,230 @@ class _StepCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 11,
+                radius: 10.5,
                 backgroundColor: Palette.gold,
-                child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                child: Text(
+                  number,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: 6),
               Icon(icon, color: Palette.primary, size: 24),
             ],
           ),
           const SizedBox(height: 8),
-          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-          const SizedBox(height: 3),
-          Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Palette.textDim, fontSize: 11, height: 1.25)),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Georgia',
+              fontWeight: FontWeight.w700,
+              fontSize: 13.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Palette.textDim,
+              fontSize: 10.5,
+              height: 1.25,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _TipRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String text;
-  const _TipRow({required this.icon, required this.title, required this.text});
+class _RecentResultCard extends StatelessWidget {
+  const _RecentResultCard();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+    return AppCard(
+      padding: const EdgeInsets.all(13),
+      radius: 21,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(color: Palette.primarySoft, shape: BoxShape.circle),
-            child: Icon(icon, color: Palette.primary, size: 21),
+          const Text(
+            'Recent result',
+            style: TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Palette.primaryDark,
+            ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 10),
+          Container(
+            height: 92,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFDDEBCC), Color(0xFFF0D99A)],
+              ),
+            ),
+            child: const Center(
+              child: Icon(Icons.eco_rounded, size: 55, color: Palette.primary),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text('Tomato', style: TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          const Text(
+            'Early Blight',
+            style: TextStyle(color: Palette.alert, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 7),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Palette.primarySoft,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text(text, style: const TextStyle(color: Palette.textDim)),
+                Text(
+                  'View details',
+                  style: TextStyle(
+                    color: Palette.primaryDark,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(width: 3),
+                Icon(Icons.chevron_right_rounded, size: 15, color: Palette.primaryDark),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhotoTipsCard extends StatelessWidget {
+  const _PhotoTipsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(13),
+      radius: 21,
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Photo tips',
+            style: TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Palette.primaryDark,
+            ),
+          ),
+          SizedBox(height: 11),
+          _MiniTip(icon: Icons.wb_sunny_outlined, title: 'Good light'),
+          _MiniTip(icon: Icons.eco_rounded, title: 'Whole leaf'),
+          _MiniTip(icon: Icons.center_focus_strong_rounded, title: 'Clear focus'),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniTip extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  const _MiniTip({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: Palette.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Palette.primary, size: 18),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback? onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.active = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: active ? Palette.primarySoft : Colors.transparent,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Icon(
+                  icon,
+                  color: active ? Palette.primaryDark : const Color(0xFF455049),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? Palette.primaryDark : const Color(0xFF455049),
+                  fontSize: 11.5,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
