@@ -22,6 +22,15 @@ class ReportScreen extends StatelessWidget {
     required this.lang,
   });
 
+  String t(String en, String sn, String nd, String toi) {
+    switch (lang) {
+      case 'sn': return sn;
+      case 'nd': return nd;
+      case 'toi': return toi;
+      default: return en;
+    }
+  }
+
   String get languageName {
     switch (lang) {
       case 'sn': return 'Shona';
@@ -33,12 +42,28 @@ class ReportScreen extends StatelessWidget {
 
   String get _safeCrop => diagnosis.crop.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
 
+  String get reportTitle => t('Crop health report', 'Report yehutano hwechirimwa', 'Umbiko wempilakahle yesilimo', 'Report yabubotu bwamulimo');
+  String get statusText => diagnosis.isHealthy
+      ? t('Leaf looks healthy', 'Shizha rinoratidzika rine utano', 'Iqabunga libonakala liphilile', 'Shizha liboneka libotu')
+      : t('Disease detected', 'Chirwere chawonekwa', 'Kutholakale isifo', 'Bulwazi bwajanwa');
+  String get cropLabel => t('Crop', 'Chirimwa', 'Isilimo', 'Mulimo');
+  String get resultLabel => t('Result', 'Mhedzisiro', 'Impumela', 'Mbuyanda');
+  String get confidenceLabel => t('Confidence', 'Chivimbo', 'Ukuthembeka', 'Kululama');
+  String get nextStepsLabel => t('Recommended next steps', 'Zvekuita zvinokurudzirwa', 'Okulandelayo okunconywayo', 'Zyakucita zilandelako');
+  String get alternativesLabel => t('Other possibilities considered', 'Zvimwe zvingangove zviri izvo', 'Okunye okucatshangelweyo', 'Zvimbi zyakulangisisigwa');
+  String get noteLabel => t('Important note', 'Cherechedzo yakakosha', 'Isixwayiso esiqakathekileyo', 'Ciyeezyo cikankamanisya');
+  String get disclaimer => t(
+        'CropMedic supports crop-health decisions but does not replace a qualified agricultural extension officer, agronomist, laboratory diagnosis, or registered product label. Seek professional help when disease is severe, spreading quickly, or treatment is uncertain.',
+        'CropMedic inobatsira pakuita sarudzo dzeutano hwechirimwa asi haitore nzvimbo yemukuru wezvekurima ane hunyanzvi, agronomist, ongororo yeraboritari kana mirau yechigadzirwa chakanyoreswa. Tsvaga rubatsiro rwenyanzvi kana chirwere chakanyanya, chichipararira nekukurumidza kana kurapwa kusina kujeka.',
+        'CropMedic iyancedisa ekuthatheni izinqumo zempilakahle yesilimo kodwa ayithathi indawo yesisebenzi sezolimo esiqeqeshiweyo, agronomist, ukuhlolwa elabhorethri kumbe imiyalelo yomkhiqizo obhalisiweyo. Cela usizo lochwepheshe nxa isifo sinzima, sisabalala masinyane kumbe ukwelatshwa kungacacanga.',
+        'CropMedic ilagwasya mukusalazya makani abubotu bwamulimo pele tayibikkwi mubusena bwamuntu wasikulima ulizyi, agronomist, kusunka kulaboratory na malayilile aproduct iregistridwe. Jana lugwasyo lwabazyi naa bulwazi buli bunkaka, bulaanda cakufwambaana na naa kulapa kutasalali.',
+      );
+
   String _html() {
     final esc = const HtmlEscape();
     final photo = base64Encode(image);
     final date = DateTime.now();
     final dateText = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    final healthy = diagnosis.isHealthy;
     final advice = diagnosis.advice.map((a) => '<li>${esc.convert(a)}</li>').join();
     final alternatives = diagnosis.topPredictions
         .take(3)
@@ -55,20 +80,20 @@ body{font-family:Arial,sans-serif;color:#15352c;margin:36px;line-height:1.45}
 h1{color:#0f5d46;margin:0 0 8px}.status{display:inline-block;padding:6px 10px;border-radius:999px;background:#e5f2e7;font-weight:700}
 .small{color:#65736e;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.label{color:#6b7773;font-size:12px}.value{font-size:20px;font-weight:800}.footer{margin-top:28px;padding-top:14px;border-top:1px solid #ddd;color:#777;font-size:11px}
 </style></head><body>
-<div class="header"><div><div class="brand">CropMedic</div><div class="tag">AI crop health assistant</div></div><div class="small">Report date: $dateText<br>Language: $languageName</div></div>
-<h1>Crop health report</h1>
-<span class="status">${healthy ? 'Leaf looks healthy' : 'Disease detected'}</span>
+<div class="header"><div><div class="brand">CropMedic</div><div class="tag">AI crop health assistant</div></div><div class="small">Date: $dateText<br>Language: $languageName</div></div>
+<h1>${esc.convert(reportTitle)}</h1>
+<span class="status">${esc.convert(statusText)}</span>
 <img class="photo" src="data:image/jpeg;base64,$photo" alt="Crop image">
 <div class="box grid">
-<div><div class="label">Crop</div><div class="value">${esc.convert(diagnosis.crop)}</div></div>
-<div><div class="label">Result</div><div class="value">${esc.convert(healthy ? 'Healthy' : diagnosis.disease)}</div></div>
-<div><div class="label">Confidence</div><div class="value">${(diagnosis.confidence * 100).round()}%</div></div>
-<div><div class="label">CropMedic version</div><div class="value">Zimbabwe v2</div></div>
+<div><div class="label">${esc.convert(cropLabel)}</div><div class="value">${esc.convert(diagnosis.crop)}</div></div>
+<div><div class="label">${esc.convert(resultLabel)}</div><div class="value">${esc.convert(diagnosis.isHealthy ? t('Healthy', 'Rine utano', 'Philile', 'Libotu') : diagnosis.disease)}</div></div>
+<div><div class="label">${esc.convert(confidenceLabel)}</div><div class="value">${(diagnosis.confidence * 100).round()}%</div></div>
+<div><div class="label">CropMedic</div><div class="value">Zimbabwe v2</div></div>
 </div>
-${diagnosis.advice.isNotEmpty ? '<div class="box"><h2>Recommended next steps</h2><ol>$advice</ol></div>' : ''}
-${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered</h2><ul>$alternatives</ul></div>' : ''}
-<div class="box"><h2>Important note</h2><p>CropMedic supports crop-health decisions but does not replace a qualified agricultural extension officer, agronomist, laboratory diagnosis, or registered product label. Seek professional help when disease is severe, spreading quickly, or treatment is uncertain.</p></div>
-<div class="footer">Generated by CropMedic. Keep this report with your farm records or share it with an extension officer or agro-dealer.</div>
+${diagnosis.advice.isNotEmpty ? '<div class="box"><h2>${esc.convert(nextStepsLabel)}</h2><ol>$advice</ol></div>' : ''}
+${alternatives.isNotEmpty ? '<div class="box"><h2>${esc.convert(alternativesLabel)}</h2><ul>$alternatives</ul></div>' : ''}
+<div class="box"><h2>${esc.convert(noteLabel)}</h2><p>${esc.convert(disclaimer)}</p></div>
+<div class="footer">CropMedic - $languageName</div>
 </body></html>''';
   }
 
@@ -97,18 +122,18 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
                   pw.Text('AI crop health assistant', style: pw.TextStyle(fontSize: 10, color: muted)),
                 ],
               ),
-              pw.Text('Report date: $dateText\nLanguage: $languageName', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 9, color: muted)),
+              pw.Text('Date: $dateText\nLanguage: $languageName', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 9, color: muted)),
             ],
           ),
           pw.SizedBox(height: 10),
           pw.Divider(color: green, thickness: 2),
           pw.SizedBox(height: 14),
-          pw.Text('Crop health report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: green)),
+          pw.Text(reportTitle, style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: green)),
           pw.SizedBox(height: 8),
           pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: pw.BoxDecoration(color: soft, borderRadius: pw.BorderRadius.circular(12)),
-            child: pw.Text(diagnosis.isHealthy ? 'Leaf looks healthy' : 'Disease detected', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
+            child: pw.Text(statusText, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
           ),
           pw.SizedBox(height: 14),
           pw.ClipRRect(
@@ -122,17 +147,17 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
             decoration: pw.BoxDecoration(color: soft, borderRadius: pw.BorderRadius.circular(12)),
             child: pw.Row(
               children: [
-                pw.Expanded(child: _pdfField('Crop', diagnosis.crop, green, muted)),
+                pw.Expanded(child: _pdfField(cropLabel, diagnosis.crop, green, muted)),
                 pw.SizedBox(width: 12),
-                pw.Expanded(child: _pdfField('Result', diagnosis.isHealthy ? 'Healthy' : diagnosis.disease, green, muted)),
+                pw.Expanded(child: _pdfField(resultLabel, diagnosis.isHealthy ? t('Healthy', 'Rine utano', 'Philile', 'Libotu') : diagnosis.disease, green, muted)),
                 pw.SizedBox(width: 12),
-                pw.Expanded(child: _pdfField('Confidence', '${(diagnosis.confidence * 100).round()}%', green, muted)),
+                pw.Expanded(child: _pdfField(confidenceLabel, '${(diagnosis.confidence * 100).round()}%', green, muted)),
               ],
             ),
           ),
           if (diagnosis.advice.isNotEmpty) ...[
             pw.SizedBox(height: 18),
-            pw.Text('Recommended next steps', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: green)),
+            pw.Text(nextStepsLabel, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: green)),
             pw.SizedBox(height: 8),
             ...List.generate(diagnosis.advice.length, (i) {
               return pw.Padding(
@@ -156,11 +181,11 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
           ],
           if (diagnosis.topPredictions.isNotEmpty) ...[
             pw.SizedBox(height: 14),
-            pw.Text('Other possibilities considered', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: green)),
+            pw.Text(alternativesLabel, style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: green)),
             pw.SizedBox(height: 6),
             ...diagnosis.topPredictions.take(3).map((p) => pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 4),
-                  child: pw.Text('• ${p.crop} - ${p.disease}: ${(p.confidence * 100).round()}%', style: const pw.TextStyle(fontSize: 10.5)),
+                  child: pw.Text('- ${p.crop} - ${p.disease}: ${(p.confidence * 100).round()}%', style: const pw.TextStyle(fontSize: 10.5)),
                 )),
           ],
           pw.SizedBox(height: 18),
@@ -170,19 +195,16 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('Important note', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
+                pw.Text(noteLabel, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
                 pw.SizedBox(height: 5),
-                pw.Text(
-                  'CropMedic supports crop-health decisions but does not replace a qualified agricultural extension officer, agronomist, laboratory diagnosis, or registered product label. Seek professional help when disease is severe, spreading quickly, or treatment is uncertain.',
-                  style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 2.5),
-                ),
+                pw.Text(disclaimer, style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 2.5)),
               ],
             ),
           ),
         ],
         footer: (context) => pw.Padding(
           padding: const pw.EdgeInsets.only(top: 12),
-          child: pw.Text('Generated by CropMedic · Zimbabwe v2', style: pw.TextStyle(fontSize: 8, color: muted)),
+          child: pw.Text('CropMedic - Zimbabwe v2 - $languageName', style: pw.TextStyle(fontSize: 8, color: muted)),
         ),
       ),
     );
@@ -203,9 +225,7 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
   Future<void> _downloadWord(BuildContext context) async {
     try {
       await downloadWordReport(_html(), 'CropMedic_${_safeCrop}_report.doc');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Word report downloaded.')));
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('Word report downloaded.', 'Word report yadhawunirodhwa.', 'Umbiko weWord udawunilodiwe.', 'Word report yadanilodwa.'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -215,9 +235,7 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
     try {
       final bytes = await _pdfBytes();
       await downloadPdfReport(bytes, 'CropMedic_${_safeCrop}_report.pdf');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF report downloaded.')));
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('PDF report downloaded.', 'PDF report yadhawunirodhwa.', 'Umbiko wePDF udawunilodiwe.', 'PDF report yadanilodwa.'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -241,55 +259,54 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
                     ],
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Create report',
-                    style: TextStyle(fontFamily: 'Georgia', fontSize: 34, fontWeight: FontWeight.w800, color: Palette.primaryDark),
+                  Text(
+                    t('Create report', 'Gadzira report', 'Dala umbiko', 'Konza report'),
+                    style: const TextStyle(fontFamily: 'Georgia', fontSize: 34, fontWeight: FontWeight.w800, color: Palette.primaryDark),
                   ),
                   const SizedBox(height: 7),
-                  Text('Printable diagnosis report · $languageName', style: const TextStyle(color: Palette.textDim, fontSize: 15)),
+                  Text('${t('Printable diagnosis report', 'Report yekuongorora inoprintwa', 'Umbiko wokuhlola oprintwayo', 'Report yascan yaamaprinta')} · $languageName', style: const TextStyle(color: Palette.textDim, fontSize: 15)),
                   const SizedBox(height: 18),
                   AppCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.memory(image, height: 190, width: double.infinity, fit: BoxFit.cover),
-                        ),
+                        ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.memory(image, height: 190, width: double.infinity, fit: BoxFit.cover)),
                         const SizedBox(height: 16),
                         Text(diagnosis.crop, style: const TextStyle(color: Palette.textDim, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 2),
-                        Text(
-                          diagnosis.isHealthy ? 'Healthy' : diagnosis.disease,
-                          style: const TextStyle(fontFamily: 'Georgia', fontSize: 26, fontWeight: FontWeight.w800, color: Palette.primaryDark),
-                        ),
+                        Text(diagnosis.isHealthy ? t('Healthy', 'Rine utano', 'Philile', 'Libotu') : diagnosis.disease, style: const TextStyle(fontFamily: 'Georgia', fontSize: 26, fontWeight: FontWeight.w800, color: Palette.primaryDark)),
                         const SizedBox(height: 6),
-                        Text('${(diagnosis.confidence * 100).round()}% confidence'),
+                        Text('${(diagnosis.confidence * 100).round()}% $confidenceLabel'),
                         const SizedBox(height: 16),
                         const Divider(color: Palette.border),
                         const SizedBox(height: 10),
-                        const Text('Included in report', style: TextStyle(fontWeight: FontWeight.w900)),
+                        Text(t('Included in report', 'Zviri mu report', 'Okusembikweni', 'Zili mu report'), style: const TextStyle(fontWeight: FontWeight.w900)),
                         const SizedBox(height: 8),
-                        const Text('• crop photo\n• diagnosis and confidence\n• recommended next steps\n• alternative predictions\n• safety note', style: TextStyle(height: 1.5)),
+                        Text(
+                          t(
+                            '• crop photo\n• diagnosis and confidence\n• recommended next steps\n• alternative predictions\n• safety note',
+                            '• mufananidzo wechirimwa\n• kuongorora nechivimbo\n• zvekuita zvinotevera\n• zvimwe zvingangove\n• cherechedzo yekuchengeteka',
+                            '• isithombe sesilimo\n• impumela lokuthembeka\n• okulandelayo\n• ezinye impumela\n• isixwayiso sokuphepha',
+                            '• foto yamulimo\n• mbuyanda akululama\n• zyakucita\n• zyakulangisisigwa\n• ciyeezyo cakusalala',
+                          ),
+                          style: const TextStyle(height: 1.5),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
-                  PrimaryActionButton(
-                    label: 'Download PDF report',
-                    icon: Icons.picture_as_pdf_rounded,
-                    onPressed: () => _downloadPdf(context),
-                  ),
+                  PrimaryActionButton(label: t('Download PDF report', 'Dhawunirodha PDF report', 'Dawuniloda umbiko wePDF', 'Daniloda PDF report'), icon: Icons.picture_as_pdf_rounded, onPressed: () => _downloadPdf(context)),
                   const SizedBox(height: 10),
-                  SecondaryActionButton(
-                    label: 'Download Word report',
-                    icon: Icons.description_rounded,
-                    onPressed: () => _downloadWord(context),
-                  ),
+                  SecondaryActionButton(label: t('Download Word report', 'Dhawunirodha Word report', 'Dawuniloda umbiko weWord', 'Daniloda Word report'), icon: Icons.description_rounded, onPressed: () => _downloadWord(context)),
                   const SizedBox(height: 14),
-                  const Text(
-                    'The web preview downloads a real PDF and a Word-compatible .doc file. Mobile share/print integration is the next step.',
-                    style: TextStyle(color: Palette.textDim, fontSize: 12.5, height: 1.4),
+                  Text(
+                    t(
+                      'The web preview downloads a real PDF and a Word-compatible .doc file. Mobile share/print integration is the next step.',
+                      'Paweb unowana PDF chaiyo neWord-compatible .doc. Kugovera nekuprinta pafoni ndicho chinotevera.',
+                      'Kuwebhu uthola iPDF yangempela lefayela le.doc elivulwa yiWord. Ukwabelana lokuphrinta efonini yisinyathelo esilandelayo.',
+                      'Paweb ujana PDF ncobeni a .doc iijulwa aWord. Kushare akuprinta pafoni ndicilalako.',
+                    ),
+                    style: const TextStyle(color: Palette.textDim, fontSize: 12.5, height: 1.4),
                   ),
                 ],
               ),
