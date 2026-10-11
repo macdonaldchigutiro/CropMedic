@@ -142,7 +142,7 @@ class _RejectedResult extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.photo_search_rounded,
+                  Icons.photo_library_outlined,
                   color: Palette.amber,
                   size: 32,
                 ),
