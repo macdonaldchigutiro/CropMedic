@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'brand.dart';
 import 'localization.dart';
+import 'report_screen.dart';
 import 'scan_screen.dart';
 import 'theme.dart';
 
@@ -182,6 +183,22 @@ class ResultScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 18),
                   PrimaryActionButton(
+                    label: 'Create printable report',
+                    icon: Icons.description_rounded,
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ReportScreen(
+                            image: image,
+                            diagnosis: diagnosis,
+                            lang: lang,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SecondaryActionButton(
                     label: tr('backHome'),
                     icon: Icons.home_rounded,
                     onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
