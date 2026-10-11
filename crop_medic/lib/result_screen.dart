@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'brand.dart';
+import 'localization.dart';
 import 'scan_screen.dart';
 import 'theme.dart';
 
@@ -18,6 +19,8 @@ class ResultScreen extends StatelessWidget {
     required this.diagnosis,
     required this.lang,
   });
+
+  String tr(String key) => AppText.t(lang, key);
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +47,9 @@ class ResultScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  const Text(
-                    'Scan result',
-                    style: TextStyle(
+                  Text(
+                    tr('scanResult'),
+                    style: const TextStyle(
                       fontSize: 34,
                       height: 1.05,
                       fontWeight: FontWeight.w900,
@@ -93,7 +96,7 @@ class ResultScreen extends StatelessWidget {
                                         const SizedBox(width: 6),
                                         Flexible(
                                           child: Text(
-                                            healthy ? 'Leaf looks healthy' : 'Disease detected',
+                                            healthy ? tr('leafHealthy') : tr('diseaseDetected'),
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               color: statusColor,
@@ -106,12 +109,21 @@ class ResultScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 14),
-                                  const Text('Crop', style: TextStyle(color: Palette.textDim, fontSize: 12)),
-                                  Text(diagnosis.crop, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                                  const SizedBox(height: 8),
-                                  const Text('Result', style: TextStyle(color: Palette.textDim, fontSize: 12)),
                                   Text(
-                                    healthy ? 'Healthy' : diagnosis.disease,
+                                    tr('crop'),
+                                    style: const TextStyle(color: Palette.textDim, fontSize: 12),
+                                  ),
+                                  Text(
+                                    diagnosis.crop,
+                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    tr('result'),
+                                    style: const TextStyle(color: Palette.textDim, fontSize: 12),
+                                  ),
+                                  Text(
+                                    healthy ? tr('healthy') : diagnosis.disease,
                                     style: TextStyle(
                                       fontSize: 24,
                                       height: 1.05,
@@ -121,8 +133,11 @@ class ResultScreen extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 12),
                                   Text(
-                                    '${(diagnosis.confidence * 100).round()}% confidence',
-                                    style: const TextStyle(fontWeight: FontWeight.w800, color: Palette.primaryDark),
+                                    '${(diagnosis.confidence * 100).round()}% ${tr('confidence')}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: Palette.primaryDark,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -134,9 +149,13 @@ class ResultScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Text(
                           healthy
-                              ? 'CropMedic found no strong signs of the supported diseases in this leaf.'
-                              : 'CropMedic found signs of ${diagnosis.disease.toLowerCase()} on this leaf.',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.4),
+                              ? tr('healthySummary')
+                              : '${tr('diseaseSummaryStart')} ${diagnosis.disease.toLowerCase()} ${tr('diseaseSummaryEnd')}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            height: 1.4,
+                          ),
                         ),
                       ],
                     ),
@@ -147,7 +166,14 @@ class ResultScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Next steps', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Palette.primaryDark)),
+                          Text(
+                            tr('nextSteps'),
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              color: Palette.primaryDark,
+                            ),
+                          ),
                           const SizedBox(height: 14),
                           for (int i = 0; i < diagnosis.advice.length; i++)
                             _AdviceRow(index: i, text: diagnosis.advice[i]),
@@ -156,13 +182,13 @@ class ResultScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 18),
                   PrimaryActionButton(
-                    label: 'Back to home',
+                    label: tr('backHome'),
                     icon: Icons.home_rounded,
                     onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                   ),
                   const SizedBox(height: 10),
                   SecondaryActionButton(
-                    label: 'Scan another leaf',
+                    label: tr('scanAnother'),
                     icon: Icons.camera_alt_rounded,
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
