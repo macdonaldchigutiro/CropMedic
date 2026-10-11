@@ -15,96 +15,182 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const imageUrl =
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=85';
+
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-                children: [
-                  Row(
-                    children: [
-                      const CropMedicBrand(compact: true, showTagline: false),
-                      const Spacer(),
-                      TextButton(
+              constraints: const BoxConstraints(maxWidth: 430),
+              child: Container(
+                color: Palette.bg.withOpacity(0.97),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+                        children: [
+                          Row(
+                            children: [
+                              const CropMedicBrand(
+                                compact: true,
+                                showTagline: false,
+                              ),
+                              const Spacer(),
+                              TextButton(
+                                onPressed: () => _openHome(context),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Palette.primaryDark,
+                                ),
+                                child: const Text(
+                                  'Skip',
+                                  style: TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 22),
+                          const Text(
+                            'Healthy crops\nstart with\none photo',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Georgia',
+                              fontSize: 38,
+                              height: 0.98,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -1.1,
+                              color: Palette.primaryDark,
+                            ),
+                          ),
+                          const SizedBox(height: 13),
+                          const Text(
+                            'Detect crop problems early and get expert guidance in seconds.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Palette.textDim,
+                              fontSize: 16,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: SizedBox(
+                              height: 205,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      decoration: const BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Color(0xFFDCEBD6),
+                                            Color(0xFFF2E5B8),
+                                          ],
+                                        ),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.eco_rounded,
+                                          size: 115,
+                                          color: Palette.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0x12000000),
+                                          Color(0x33083D2F),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const Positioned(
+                                    left: 18,
+                                    bottom: 16,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xEFFFFFFF),
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(999),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.auto_awesome_rounded,
+                                            size: 17,
+                                            color: Palette.gold,
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            'Simple crop diagnosis',
+                                            style: TextStyle(
+                                              color: Palette.primaryDark,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const _Benefit(
+                            icon: Icons.camera_alt_rounded,
+                            title: 'Scan crop leaves',
+                            subtitle: 'Take a clear photo of one leaf.',
+                          ),
+                          const _Benefit(
+                            icon: Icons.fact_check_rounded,
+                            title: 'Get clear results',
+                            subtitle: 'Know what CropMedic found quickly.',
+                          ),
+                          const _Benefit(
+                            icon: Icons.spa_rounded,
+                            title: 'Follow simple advice',
+                            subtitle: 'Get practical next steps for your crop.',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+                      decoration: const BoxDecoration(
+                        color: Palette.bg,
+                        border: Border(
+                          top: BorderSide(color: Palette.border),
+                        ),
+                      ),
+                      child: PrimaryActionButton(
+                        label: 'Continue',
+                        icon: Icons.arrow_forward_rounded,
                         onPressed: () => _openHome(context),
-                        child: const Text('Skip'),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 34),
-                  const Text(
-                    'Healthy crops start with one photo',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 38,
-                      height: 1.04,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.2,
-                      color: Palette.primaryDark,
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'Detect crop problems early and get simple, practical guidance in seconds.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Palette.textDim,
-                      fontSize: 17,
-                      height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  Container(
-                    height: 210,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFDDEDD7), Color(0xFFF5EBCB)],
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    child: Stack(
-                      children: const [
-                        Positioned(
-                          right: 26,
-                          bottom: 18,
-                          child: Icon(Icons.eco_rounded, size: 140, color: Color(0xFF4D9361)),
-                        ),
-                        Positioned(
-                          left: 28,
-                          top: 28,
-                          child: CropMedicMark(size: 72),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const _Benefit(
-                    icon: Icons.camera_alt_rounded,
-                    title: 'Scan crop leaves',
-                    subtitle: 'Take one clear photo of a leaf.',
-                  ),
-                  const _Benefit(
-                    icon: Icons.fact_check_rounded,
-                    title: 'Get clear results',
-                    subtitle: 'See what CropMedic found in plain language.',
-                  ),
-                  const _Benefit(
-                    icon: Icons.spa_rounded,
-                    title: 'Follow simple advice',
-                    subtitle: 'Get practical next steps you can use in the field.',
-                  ),
-                  const SizedBox(height: 16),
-                  PrimaryActionButton(
-                    label: 'Continue',
-                    icon: Icons.arrow_forward_rounded,
-                    onPressed: () => _openHome(context),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -128,29 +214,44 @@ class _Benefit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
-        padding: const EdgeInsets.all(15),
-        radius: 18,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        radius: 19,
         child: Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 45,
+              height: 45,
               decoration: const BoxDecoration(
                 color: Palette.primarySoft,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Palette.primary, size: 23),
+              child: Icon(icon, color: Palette.primary, size: 22),
             ),
-            const SizedBox(width: 13),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(color: Palette.textDim, height: 1.35)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Georgia',
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                      color: Palette.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Palette.textDim,
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
+                  ),
                 ],
               ),
             ),
