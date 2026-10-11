@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 import 'api.dart';
 import 'brand.dart';
@@ -29,25 +31,22 @@ class ReportScreen extends StatelessWidget {
     }
   }
 
+  String get _safeCrop => diagnosis.crop.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+
   String _html() {
     final esc = const HtmlEscape();
     final photo = base64Encode(image);
     final date = DateTime.now();
     final dateText = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     final healthy = diagnosis.isHealthy;
-    final advice = diagnosis.advice
-        .map((a) => '<li>${esc.convert(a)}</li>')
-        .join();
+    final advice = diagnosis.advice.map((a) => '<li>${esc.convert(a)}</li>').join();
     final alternatives = diagnosis.topPredictions
         .take(3)
-        .map((p) => '<li>${esc.convert(p.crop)} — ${esc.convert(p.disease)} (${(p.confidence * 100).round()}%)</li>')
+        .map((p) => '<li>${esc.convert(p.crop)} - ${esc.convert(p.disease)} (${(p.confidence * 100).round()}%)</li>')
         .join();
 
     return '''<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>CropMedic Report</title>
+<html><head><meta charset="utf-8"><title>CropMedic Report</title>
 <style>
 body{font-family:Arial,sans-serif;color:#15352c;margin:36px;line-height:1.45}
 .header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #15654d;padding-bottom:16px;margin-bottom:24px}
@@ -55,10 +54,7 @@ body{font-family:Arial,sans-serif;color:#15352c;margin:36px;line-height:1.45}
 .photo{width:100%;max-width:520px;border-radius:18px;margin:14px 0}.box{border:1px solid #dfe8df;border-radius:16px;padding:18px;margin:16px 0;background:#fbfcf8}
 h1{color:#0f5d46;margin:0 0 8px}.status{display:inline-block;padding:6px 10px;border-radius:999px;background:#e5f2e7;font-weight:700}
 .small{color:#65736e;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.label{color:#6b7773;font-size:12px}.value{font-size:20px;font-weight:800}.footer{margin-top:28px;padding-top:14px;border-top:1px solid #ddd;color:#777;font-size:11px}
-@media print{body{margin:18mm}.no-print{display:none}}
-</style>
-</head>
-<body>
+</style></head><body>
 <div class="header"><div><div class="brand">CropMedic</div><div class="tag">AI crop health assistant</div></div><div class="small">Report date: $dateText<br>Language: $languageName</div></div>
 <h1>Crop health report</h1>
 <span class="status">${healthy ? 'Leaf looks healthy' : 'Disease detected'}</span>
@@ -76,30 +72,154 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
 </body></html>''';
   }
 
+  Future<Uint8List> _pdfBytes() async {
+    final doc = pw.Document();
+    final photo = pw.MemoryImage(image);
+    final date = DateTime.now();
+    final dateText = '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final green = PdfColor.fromHex('#0F5D46');
+    final muted = PdfColor.fromHex('#66736E');
+    final soft = PdfColor.fromHex('#F2F6EE');
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(34),
+        build: (context) => [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('CropMedic', style: pw.TextStyle(fontSize: 27, fontWeight: pw.FontWeight.bold, color: green)),
+                  pw.Text('AI crop health assistant', style: pw.TextStyle(fontSize: 10, color: muted)),
+                ],
+              ),
+              pw.Text('Report date: $dateText\nLanguage: $languageName', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 9, color: muted)),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Divider(color: green, thickness: 2),
+          pw.SizedBox(height: 14),
+          pw.Text('Crop health report', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: green)),
+          pw.SizedBox(height: 8),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: pw.BoxDecoration(color: soft, borderRadius: pw.BorderRadius.circular(12)),
+            child: pw.Text(diagnosis.isHealthy ? 'Leaf looks healthy' : 'Disease detected', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
+          ),
+          pw.SizedBox(height: 14),
+          pw.ClipRRect(
+            horizontalRadius: 14,
+            verticalRadius: 14,
+            child: pw.Image(photo, height: 230, fit: pw.BoxFit.cover),
+          ),
+          pw.SizedBox(height: 16),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(14),
+            decoration: pw.BoxDecoration(color: soft, borderRadius: pw.BorderRadius.circular(12)),
+            child: pw.Row(
+              children: [
+                pw.Expanded(child: _pdfField('Crop', diagnosis.crop, green, muted)),
+                pw.SizedBox(width: 12),
+                pw.Expanded(child: _pdfField('Result', diagnosis.isHealthy ? 'Healthy' : diagnosis.disease, green, muted)),
+                pw.SizedBox(width: 12),
+                pw.Expanded(child: _pdfField('Confidence', '${(diagnosis.confidence * 100).round()}%', green, muted)),
+              ],
+            ),
+          ),
+          if (diagnosis.advice.isNotEmpty) ...[
+            pw.SizedBox(height: 18),
+            pw.Text('Recommended next steps', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: green)),
+            pw.SizedBox(height: 8),
+            ...List.generate(diagnosis.advice.length, (i) {
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 7),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Container(
+                      width: 18,
+                      height: 18,
+                      alignment: pw.Alignment.center,
+                      decoration: pw.BoxDecoration(color: green, shape: pw.BoxShape.circle),
+                      child: pw.Text('${i + 1}', style: const pw.TextStyle(color: PdfColors.white, fontSize: 9)),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(child: pw.Text(diagnosis.advice[i], style: const pw.TextStyle(fontSize: 11, lineSpacing: 3))),
+                  ],
+                ),
+              );
+            }),
+          ],
+          if (diagnosis.topPredictions.isNotEmpty) ...[
+            pw.SizedBox(height: 14),
+            pw.Text('Other possibilities considered', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: green)),
+            pw.SizedBox(height: 6),
+            ...diagnosis.topPredictions.take(3).map((p) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 4),
+                  child: pw.Text('• ${p.crop} - ${p.disease}: ${(p.confidence * 100).round()}%', style: const pw.TextStyle(fontSize: 10.5)),
+                )),
+          ],
+          pw.SizedBox(height: 18),
+          pw.Container(
+            padding: const pw.EdgeInsets.all(13),
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColor.fromHex('#D8E1D7')), borderRadius: pw.BorderRadius.circular(10)),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Important note', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: green)),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  'CropMedic supports crop-health decisions but does not replace a qualified agricultural extension officer, agronomist, laboratory diagnosis, or registered product label. Seek professional help when disease is severe, spreading quickly, or treatment is uncertain.',
+                  style: const pw.TextStyle(fontSize: 9.5, lineSpacing: 2.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+        footer: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.only(top: 12),
+          child: pw.Text('Generated by CropMedic · Zimbabwe v2', style: pw.TextStyle(fontSize: 8, color: muted)),
+        ),
+      ),
+    );
+    return doc.save();
+  }
+
+  pw.Widget _pdfField(String label, String value, PdfColor green, PdfColor muted) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(label, style: pw.TextStyle(fontSize: 8.5, color: muted)),
+        pw.SizedBox(height: 3),
+        pw.Text(value, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: green)),
+      ],
+    );
+  }
+
   Future<void> _downloadWord(BuildContext context) async {
     try {
-      final cleanCrop = diagnosis.crop.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
-      await downloadWordReport(_html(), 'CropMedic_${cleanCrop}_report.doc');
+      await downloadWordReport(_html(), 'CropMedic_${_safeCrop}_report.doc');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Word report created.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Word report downloaded.')));
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
-  Future<void> _printPdf(BuildContext context) async {
+  Future<void> _downloadPdf(BuildContext context) async {
     try {
-      await printHtmlReport(_html());
+      final bytes = await _pdfBytes();
+      await downloadPdfReport(bytes, 'CropMedic_${_safeCrop}_report.pdf');
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Choose “Save as PDF” in the print window.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PDF report downloaded.')));
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-      }
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
@@ -116,28 +236,17 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                      ),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_rounded)),
                       const Expanded(child: CropMedicBrand(compact: true, showTagline: false)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   const Text(
                     'Create report',
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      color: Palette.primaryDark,
-                    ),
+                    style: TextStyle(fontFamily: 'Georgia', fontSize: 34, fontWeight: FontWeight.w800, color: Palette.primaryDark),
                   ),
                   const SizedBox(height: 7),
-                  Text(
-                    'Printable diagnosis report · $languageName',
-                    style: const TextStyle(color: Palette.textDim, fontSize: 15),
-                  ),
+                  Text('Printable diagnosis report · $languageName', style: const TextStyle(color: Palette.textDim, fontSize: 15)),
                   const SizedBox(height: 18),
                   AppCard(
                     child: Column(
@@ -156,22 +265,20 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
                         ),
                         const SizedBox(height: 6),
                         Text('${(diagnosis.confidence * 100).round()}% confidence'),
-                        if (diagnosis.advice.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const Divider(color: Palette.border),
-                          const SizedBox(height: 10),
-                          const Text('Included in report', style: TextStyle(fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 8),
-                          const Text('• crop photo\n• diagnosis and confidence\n• recommended next steps\n• alternative predictions\n• safety note', style: TextStyle(height: 1.5)),
-                        ],
+                        const SizedBox(height: 16),
+                        const Divider(color: Palette.border),
+                        const SizedBox(height: 10),
+                        const Text('Included in report', style: TextStyle(fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 8),
+                        const Text('• crop photo\n• diagnosis and confidence\n• recommended next steps\n• alternative predictions\n• safety note', style: TextStyle(height: 1.5)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 18),
                   PrimaryActionButton(
-                    label: 'Print / Save as PDF',
+                    label: 'Download PDF report',
                     icon: Icons.picture_as_pdf_rounded,
-                    onPressed: () => _printPdf(context),
+                    onPressed: () => _downloadPdf(context),
                   ),
                   const SizedBox(height: 10),
                   SecondaryActionButton(
@@ -181,7 +288,7 @@ ${alternatives.isNotEmpty ? '<div class="box"><h2>Other possibilities considered
                   ),
                   const SizedBox(height: 14),
                   const Text(
-                    'On desktop Chrome, PDF uses the browser print window. Choose “Save as PDF”. The Word report downloads as a Word-compatible .doc file.',
+                    'The web preview downloads a real PDF and a Word-compatible .doc file. Mobile share/print integration is the next step.',
                     style: TextStyle(color: Palette.textDim, fontSize: 12.5, height: 1.4),
                   ),
                 ],
