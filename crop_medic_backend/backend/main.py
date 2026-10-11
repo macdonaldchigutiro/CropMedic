@@ -16,6 +16,7 @@ ADVICE = json.loads((BASE / "advice.json").read_text(encoding="utf-8"))
 
 IMG_SIZE = 224
 LOW_CONFIDENCE = 0.70
+MIN_PREDICTION_MARGIN = 0.15
 TOP_K = 3
 
 app = FastAPI(title="Crop Medic API")
@@ -158,15 +159,39 @@ async def predict(file: UploadFile = File(...), lang: str = "en"):
         )
 
     primary_idx = int(top_indices[0])
-    raw = class_names[primary_idx]
     confidence = float(probs[primary_idx])
+    second_confidence = float(probs[int(top_indices[1])]) if len(top_indices) > 1 else 0.0
+    prediction_margin = confidence - second_confidence
+
+    # A closed-set disease classifier always has a "best" class, even for a face,
+    # a car, or an unrelated plant. Do not turn a weak/ambiguous score into a diagnosis.
+    accepted = confidence >= LOW_CONFIDENCE and prediction_margin >= MIN_PREDICTION_MARGIN
+    if not accepted:
+        return {
+            "accepted": False,
+            "crop": "",
+            "disease": "",
+            "confidence": round(confidence, 3),
+            "low_confidence": True,
+            "message": (
+                "Crop Medic could not verify this as a clear supported crop-leaf image. "
+                "Use one maize, tomato, potato or bell-pepper leaf in good light and try again."
+            ),
+            "advice": [],
+            "top_predictions": predictions,
+            "demo": False,
+        }
+
+    raw = class_names[primary_idx]
     crop, disease = split_label(raw)
 
     return {
+        "accepted": True,
         "crop": crop,
         "disease": disease,
         "confidence": round(confidence, 3),
-        "low_confidence": confidence < LOW_CONFIDENCE,
+        "low_confidence": False,
+        "message": None,
         "advice": get_advice(raw, lang),
         "top_predictions": predictions,
         "demo": False,
