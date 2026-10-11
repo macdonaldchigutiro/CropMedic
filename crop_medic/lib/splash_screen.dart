@@ -55,11 +55,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ),
                 const SizedBox(height: 42),
-                SizedBox(
+                const SizedBox(
                   width: 120,
                   child: LinearProgressIndicator(
                     minHeight: 4,
-                    borderRadius: BorderRadius.circular(999),
                     color: Palette.gold,
                     backgroundColor: Palette.primarySoft,
                   ),
