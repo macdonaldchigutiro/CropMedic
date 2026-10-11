@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
 
 class Palette {
-  static const bg = Color(0xFF050B14);
-  static const bgTop = Color(0xFF0A1B2E);
-  static const neonGreen = Color(0xFF00FF9D);
-  static const neonCyan = Color(0xFF00E5FF);
-  static const amber = Color(0xFFFFB020);
-  static const alert = Color(0xFFFF5C7A);
-  static const text = Color(0xFFE8F4FF);
-  static const textDim = Color(0xFF7F98B2);
-  static const glass = Color(0x0FFFFFFF);
-  static const glassBorder = Color(0x1FFFFFFF);
+  static const bg = Color(0xFFF4F7F2);
+  static const bgTop = Color(0xFFE8F3E6);
+  static const surface = Color(0xFFFFFFFF);
+  static const surfaceSoft = Color(0xFFF0F6EF);
+  static const primary = Color(0xFF2F7D32);
+  static const primaryDark = Color(0xFF1F5E25);
+  static const primarySoft = Color(0xFFDFF0DD);
+  static const accent = Color(0xFF2B8C7D);
+  static const amber = Color(0xFFE89B18);
+  static const alert = Color(0xFFC74444);
+  static const text = Color(0xFF183022);
+  static const textDim = Color(0xFF68796D);
+  static const border = Color(0xFFDCE7DC);
+
+  // Backwards-compatible aliases while older widgets are migrated.
+  static const neonGreen = primary;
+  static const neonCyan = accent;
+  static const glass = surface;
+  static const glassBorder = border;
 }
 
 const neonGradient = LinearGradient(
-  colors: [Palette.neonGreen, Palette.neonCyan],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [Palette.primary, Palette.accent],
 );
 
 class AppBackground extends StatelessWidget {
@@ -28,37 +39,11 @@ class AppBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Palette.bgTop, Palette.bg],
+          colors: [Palette.bgTop, Palette.bg, Palette.bg],
+          stops: [0, 0.34, 1],
         ),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -100,
-            child: _glow(Palette.neonCyan, 300),
-          ),
-          Positioned(
-            bottom: -140,
-            left: -120,
-            child: _glow(Palette.neonGreen, 320),
-          ),
-          child,
-        ],
-      ),
-    );
-  }
-
-  Widget _glow(Color c, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [c.withOpacity(0.16), c.withOpacity(0.0)],
-        ),
-      ),
+      child: child,
     );
   }
 }
@@ -66,10 +51,12 @@ class AppBackground extends StatelessWidget {
 class GlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets padding;
+  final Color? color;
   const GlassCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(18),
+    this.color,
   });
 
   @override
@@ -78,9 +65,16 @@ class GlassCard extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: Palette.glass,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Palette.glassBorder),
+        color: color ?? Palette.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Palette.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x120E2B16),
+            blurRadius: 24,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: child,
     );
