@@ -21,6 +21,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String tr(String key) => AppText.t(_lang, key);
 
+  double get _heroTitleSize {
+    switch (_lang) {
+      case 'sn':
+      case 'nd':
+        return 25;
+      case 'toi':
+        return 27;
+      default:
+        return 31;
+    }
+  }
+
+  double get _heroHeight => _lang == 'en' ? 245 : 282;
+
   Future<void> _pickGallery() async {
     if (_busy) return;
     final picked = await _picker.pickImage(
@@ -93,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 12),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: _StepCard(
@@ -168,9 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
           value: _lang,
           enabled: !_busy,
           onChanged: (value) {
-            if (value != null) {
-              setState(() => _lang = value);
-            }
+            if (value != null) setState(() => _lang = value);
           },
         ),
       ],
@@ -184,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: SizedBox(
-        height: 245,
+        height: _heroHeight,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -218,43 +231,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  stops: [0, 0.58, 1],
+                  stops: [0, 0.62, 1],
                   colors: [
                     Color(0xFFF8F8F2),
-                    Color(0xEDF4F5E9),
-                    Color(0x1AFFFFFF),
+                    Color(0xF2F4F5E9),
+                    Color(0x22FFFFFF),
                   ],
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 24, 20, 22),
+              padding: const EdgeInsets.fromLTRB(22, 20, 18, 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
-                  width: 245,
+                  width: 250,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         tr('heroTitle'),
-                        style: const TextStyle(
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
                           fontFamily: 'Georgia',
                           color: Palette.primaryDark,
-                          fontSize: 33,
-                          height: 0.98,
+                          fontSize: _heroTitleSize,
+                          height: 1.02,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: -1.0,
+                          letterSpacing: -0.8,
                         ),
                       ),
-                      const SizedBox(height: 13),
+                      const SizedBox(height: 12),
                       Text(
                         tr('heroSubtitle'),
-                        style: const TextStyle(
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
                           color: Palette.textDim,
-                          fontSize: 15,
-                          height: 1.38,
+                          fontSize: _lang == 'en' ? 14.5 : 13,
+                          height: 1.34,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -305,7 +322,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           _NavItem(icon: Icons.home_rounded, label: tr('home'), active: true),
-          _NavItem(icon: Icons.camera_alt_outlined, label: tr('scan'), onTap: _openScan),
+          _NavItem(
+            icon: Icons.camera_alt_outlined,
+            label: tr('scan'),
+            onTap: _openScan,
+          ),
           _NavItem(
             icon: Icons.history_rounded,
             label: tr('history'),
@@ -343,7 +364,8 @@ class _BigAction extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          height: 64,
+          constraints: const BoxConstraints(minHeight: 64),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           decoration: BoxDecoration(
             gradient: primary ? brandGradient : null,
             color: primary ? null : Palette.surface,
@@ -365,8 +387,12 @@ class _BigAction extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: primary ? Colors.white : Palette.primaryDark, size: 27),
-              const SizedBox(width: 13),
+              Icon(
+                icon,
+                color: primary ? Colors.white : Palette.primaryDark,
+                size: 26,
+              ),
+              const SizedBox(width: 12),
               Flexible(
                 child: Text(
                   title,
@@ -376,16 +402,16 @@ class _BigAction extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'Georgia',
                     color: primary ? Colors.white : Palette.primaryDark,
-                    fontSize: 20,
+                    fontSize: 19,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 10),
               Icon(
                 Icons.chevron_right_rounded,
                 color: primary ? Colors.white : Palette.primaryDark,
-                size: 28,
+                size: 27,
               ),
             ],
           ),
@@ -433,6 +459,7 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 132),
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF2F6EE),
@@ -464,21 +491,24 @@ class _StepCard extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontFamily: 'Georgia',
               fontWeight: FontWeight.w700,
-              fontSize: 13,
+              fontSize: 12.5,
+              height: 1.15,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           Text(
             text,
             textAlign: TextAlign.center,
             maxLines: 3,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Palette.textDim,
-              fontSize: 10.5,
-              height: 1.25,
+              fontSize: 10,
+              height: 1.22,
             ),
           ),
         ],
@@ -503,9 +533,11 @@ class _RecentResultCard extends StatelessWidget {
         children: [
           Text(
             title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontFamily: 'Georgia',
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: Palette.primaryDark,
             ),
@@ -534,16 +566,18 @@ class _RecentResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             decoration: BoxDecoration(
               color: Palette.primarySoft,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               viewDetails,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Palette.primaryDark,
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -577,9 +611,11 @@ class _PhotoTipsCard extends StatelessWidget {
         children: [
           Text(
             title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontFamily: 'Georgia',
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: Palette.primaryDark,
             ),
@@ -619,7 +655,9 @@ class _MiniTip extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -670,9 +708,10 @@ class _NavItem extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: active ? Palette.primaryDark : Palette.textDim,
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                 ),
               ),
