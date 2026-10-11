@@ -25,6 +25,9 @@ class ResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = diagnosis.isHealthy ? 'Healthy leaf' : diagnosis.disease;
+    final alternatives = diagnosis.topPredictions.length > 1
+        ? diagnosis.topPredictions.skip(1).toList()
+        : <PredictionCandidate>[];
 
     return Scaffold(
       body: AppBackground(
@@ -94,7 +97,7 @@ class ResultScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                diagnosis.crop + (diagnosis.demo ? '  (demo mode)' : ''),
+                diagnosis.crop,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Palette.textDim),
               ),
@@ -107,14 +110,30 @@ class ResultScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Not very sure about this one. Please confirm '
-                          'with an extension officer.',
+                          'The image is not conclusive enough for a confident result. '
+                          'Check the other possibilities below and confirm with an '
+                          'agronomist or extension officer before treatment.',
                           style: TextStyle(color: Palette.text),
                         ),
                       ),
                     ],
                   ),
                 ),
+              ],
+              if (alternatives.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const Text(
+                  'OTHER POSSIBILITIES',
+                  style: TextStyle(
+                    color: Palette.neonCyan,
+                    letterSpacing: 3,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (final candidate in alternatives)
+                  _AlternativeTile(candidate: candidate),
               ],
               const SizedBox(height: 24),
               const Text(
@@ -158,6 +177,55 @@ class ResultScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AlternativeTile extends StatelessWidget {
+  final PredictionCandidate candidate;
+
+  const _AlternativeTile({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    candidate.disease,
+                    style: const TextStyle(
+                      color: Palette.text,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    candidate.crop,
+                    style: const TextStyle(
+                      color: Palette.textDim,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '${(candidate.confidence * 100).round()}%',
+              style: const TextStyle(
+                color: Palette.neonCyan,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
       ),
     );
