@@ -38,39 +38,44 @@ CropMedic should remain simple enough for an older farmer to use without trainin
 
 ### 5. Printable diagnosis reports
 - Result screen can create a report.
-- Word-compatible download in the web preview.
-- Print / Save as PDF from the browser.
+- Real PDF download in the web preview.
+- Word-compatible `.doc` download in the web preview.
+- Report follows the selected English, Shona, Ndebele or Tonga language for its main labels and guidance.
 - Report includes crop photo, diagnosis, confidence, advice, alternatives and a professional-help disclaimer.
+
+### 6. Cleaner first-run onboarding
+- One clear Continue action instead of competing Skip/Continue actions.
+- Onboarding is remembered after completion and later launches go directly to Home.
 
 ## Next-wave features
 
-### 6. Scan history / farm records
+### 7. Scan history / farm records
 - Save crop, photo, date, diagnosis, confidence and advice.
 - Filter by crop or field.
 - Generate multi-scan field-health reports.
 
-### 7. Seasonal crop calendar
+### 8. Seasonal crop calendar
 - Crop stage: planting → establishment → vegetative → flowering → harvest.
 - Stage-specific disease/pest watch-outs.
 - Water/weather reminders.
 - Simple management prompts.
 
-### 8. Offline mode
+### 9. Offline mode
 - Disease library should be fully usable without internet.
 - Cache previously viewed guidance and previous scans.
 - Queue reports/history locally when connectivity is poor.
 
-### 9. Audio guidance
+### 10. Audio guidance
 - “Listen” button on diagnosis and library guidance.
 - Prioritise Shona, Ndebele, Tonga and English.
 - Important for users with low literacy or who prefer spoken guidance.
 
-### 10. Extension-officer handoff
+### 11. Extension-officer handoff
 - “Share with extension officer” from a diagnosis.
 - Attach latest CropMedic report.
 - Include image, diagnosis, confidence and farmer notes.
 
-### 11. Better image validation
+### 12. Better image validation
 - Dedicated supported-leaf / non-leaf check before disease classification.
 - Reject faces, people, vehicles, food, household objects, unsupported plants and unusable photos.
 - Quality checks for blur, darkness, distance and incomplete leaf framing.
