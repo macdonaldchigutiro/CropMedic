@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'brand.dart';
+import 'localization.dart';
 import 'scan_screen.dart';
 import 'theme.dart';
 
@@ -19,6 +20,8 @@ class UnsupportedImageScreen extends StatelessWidget {
     required this.lang,
   });
 
+  String tr(String key) => AppText.t(lang, key);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,9 +35,9 @@ class UnsupportedImageScreen extends StatelessWidget {
                 children: [
                   const CropMedicBrand(compact: true, showTagline: false),
                   const SizedBox(height: 26),
-                  const Text(
-                    'Try another photo',
-                    style: TextStyle(
+                  Text(
+                    tr('tryAnotherPhoto'),
+                    style: const TextStyle(
                       fontSize: 36,
                       height: 1.05,
                       fontWeight: FontWeight.w900,
@@ -67,16 +70,20 @@ class UnsupportedImageScreen extends StatelessWidget {
                               child: CircleAvatar(
                                 radius: 27,
                                 backgroundColor: Palette.amber,
-                                child: Icon(Icons.priority_high_rounded, color: Colors.white, size: 31),
+                                child: Icon(
+                                  Icons.priority_high_rounded,
+                                  color: Colors.white,
+                                  size: 31,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 22),
-                        const Text(
-                          "We couldn’t confirm this is a supported crop leaf.",
+                        Text(
+                          tr('couldNotConfirm'),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 24,
                             height: 1.15,
                             fontWeight: FontWeight.w900,
@@ -85,8 +92,7 @@ class UnsupportedImageScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          diagnosis.message ??
-                              'Take a clear photo of one maize, tomato, potato, or bell pepper leaf.',
+                          tr('supportedPhotoHelp'),
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Palette.textDim, height: 1.45),
                         ),
@@ -94,12 +100,24 @@ class UnsupportedImageScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const AppCard(
+                  AppCard(
                     child: Column(
                       children: [
-                        _TipRow(icon: Icons.eco_rounded, title: 'Use one leaf', text: 'Take a close-up of a single supported crop leaf.'),
-                        _TipRow(icon: Icons.wb_sunny_outlined, title: 'Use good light', text: 'Natural daylight works best.'),
-                        _TipRow(icon: Icons.center_focus_strong_rounded, title: 'Keep the leaf in focus', text: 'Make sure the leaf is sharp and not blurred.'),
+                        _TipRow(
+                          icon: Icons.eco_rounded,
+                          title: tr('useOneLeaf'),
+                          text: tr('useOneLeafBody'),
+                        ),
+                        _TipRow(
+                          icon: Icons.wb_sunny_outlined,
+                          title: tr('useGoodLight'),
+                          text: tr('useGoodLightBody'),
+                        ),
+                        _TipRow(
+                          icon: Icons.center_focus_strong_rounded,
+                          title: tr('keepLeafFocus'),
+                          text: tr('keepLeafFocusBody'),
+                        ),
                       ],
                     ),
                   ),
@@ -110,15 +128,15 @@ class UnsupportedImageScreen extends StatelessWidget {
                       color: Palette.alertSoft,
                       borderRadius: BorderRadius.circular(18),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.block_rounded, color: Palette.alert),
-                        SizedBox(width: 10),
+                        const Icon(Icons.block_rounded, color: Palette.alert),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'CropMedic cannot diagnose faces, hands, other objects, or non-crop plants.',
-                            style: TextStyle(height: 1.4),
+                            tr('cannotDiagnose'),
+                            style: const TextStyle(height: 1.4),
                           ),
                         ),
                       ],
@@ -126,7 +144,7 @@ class UnsupportedImageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   PrimaryActionButton(
-                    label: 'Try again',
+                    label: tr('tryAgain'),
                     icon: Icons.camera_alt_rounded,
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
@@ -136,7 +154,7 @@ class UnsupportedImageScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 11),
                   SecondaryActionButton(
-                    label: 'Back to home',
+                    label: tr('backHome'),
                     icon: Icons.home_rounded,
                     onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                   ),
@@ -178,9 +196,15 @@ class _TipRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
                 const SizedBox(height: 3),
-                Text(text, style: const TextStyle(color: Palette.textDim, height: 1.35)),
+                Text(
+                  text,
+                  style: const TextStyle(color: Palette.textDim, height: 1.35),
+                ),
               ],
             ),
           ),
