@@ -16,7 +16,7 @@ Future<void> startDiagnosisFlow(
 
   navigator.push(
     MaterialPageRoute(
-      builder: (_) => LoadingScreen(image: image),
+      builder: (_) => LoadingScreen(image: image, lang: lang),
       fullscreenDialog: true,
     ),
   );
