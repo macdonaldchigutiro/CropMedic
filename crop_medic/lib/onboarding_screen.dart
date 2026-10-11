@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'brand.dart';
 import 'home_screen.dart';
@@ -7,7 +8,10 @@ import 'theme.dart';
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
-  void _openHome(BuildContext context) {
+  Future<void> _openHome(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('cropmedic_seen_onboarding', true);
+    if (!context.mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
@@ -32,24 +36,12 @@ class OnboardingScreen extends StatelessWidget {
                       child: ListView(
                         padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
                         children: [
-                          Row(
-                            children: [
-                              const CropMedicBrand(
-                                compact: true,
-                                showTagline: false,
-                              ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: () => _openHome(context),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Palette.primaryDark,
-                                ),
-                                child: const Text(
-                                  'Skip',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ],
+                          const Align(
+                            alignment: Alignment.centerLeft,
+                            child: CropMedicBrand(
+                              compact: true,
+                              showTagline: false,
+                            ),
                           ),
                           const SizedBox(height: 22),
                           const Text(
@@ -90,18 +82,11 @@ class OnboardingScreen extends StatelessWidget {
                                         gradient: LinearGradient(
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
-                                          colors: [
-                                            Color(0xFFDCEBD6),
-                                            Color(0xFFF2E5B8),
-                                          ],
+                                          colors: [Color(0xFFDCEBD6), Color(0xFFF2E5B8)],
                                         ),
                                       ),
                                       child: const Center(
-                                        child: Icon(
-                                          Icons.eco_rounded,
-                                          size: 115,
-                                          color: Palette.primary,
-                                        ),
+                                        child: Icon(Icons.eco_rounded, size: 115, color: Palette.primary),
                                       ),
                                     ),
                                   ),
@@ -110,10 +95,7 @@ class OnboardingScreen extends StatelessWidget {
                                       gradient: LinearGradient(
                                         begin: Alignment.topCenter,
                                         end: Alignment.bottomCenter,
-                                        colors: [
-                                          Color(0x12000000),
-                                          Color(0x33083D2F),
-                                        ],
+                                        colors: [Color(0x12000000), Color(0x33083D2F)],
                                       ),
                                     ),
                                   ),
@@ -121,32 +103,19 @@ class OnboardingScreen extends StatelessWidget {
                                     left: 18,
                                     bottom: 16,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                       decoration: const BoxDecoration(
                                         color: Color(0xEFFFFFFF),
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(999),
-                                        ),
+                                        borderRadius: BorderRadius.all(Radius.circular(999)),
                                       ),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
-                                            Icons.auto_awesome_rounded,
-                                            size: 17,
-                                            color: Palette.gold,
-                                          ),
+                                          Icon(Icons.auto_awesome_rounded, size: 17, color: Palette.gold),
                                           SizedBox(width: 6),
                                           Text(
                                             'Simple crop diagnosis',
-                                            style: TextStyle(
-                                              color: Palette.primaryDark,
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w800,
-                                            ),
+                                            style: TextStyle(color: Palette.primaryDark, fontSize: 12.5, fontWeight: FontWeight.w800),
                                           ),
                                         ],
                                       ),
@@ -179,9 +148,7 @@ class OnboardingScreen extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
                       decoration: const BoxDecoration(
                         color: Palette.bg,
-                        border: Border(
-                          top: BorderSide(color: Palette.border),
-                        ),
+                        border: Border(top: BorderSide(color: Palette.border)),
                       ),
                       child: PrimaryActionButton(
                         label: 'Continue',
@@ -205,11 +172,7 @@ class _Benefit extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const _Benefit({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
+  const _Benefit({required this.icon, required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -223,10 +186,7 @@ class _Benefit extends StatelessWidget {
             Container(
               width: 45,
               height: 45,
-              decoration: const BoxDecoration(
-                color: Palette.primarySoft,
-                shape: BoxShape.circle,
-              ),
+              decoration: const BoxDecoration(color: Palette.primarySoft, shape: BoxShape.circle),
               child: Icon(icon, color: Palette.primary, size: 22),
             ),
             const SizedBox(width: 12),
@@ -236,22 +196,10 @@ class _Benefit extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontFamily: 'Georgia',
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w700,
-                      color: Palette.primaryDark,
-                    ),
+                    style: const TextStyle(fontFamily: 'Georgia', fontSize: 15.5, fontWeight: FontWeight.w700, color: Palette.primaryDark),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Palette.textDim,
-                      fontSize: 13,
-                      height: 1.3,
-                    ),
-                  ),
+                  Text(subtitle, style: const TextStyle(color: Palette.textDim, fontSize: 13, height: 1.3)),
                 ],
               ),
             ),
