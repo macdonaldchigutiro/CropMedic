@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
       imageQuality: 88,
     );
     if (picked == null || !mounted) return;
+
     final bytes = await picked.readAsBytes();
     setState(() => _busy = true);
     await startDiagnosisFlow(context, bytes, _lang);
@@ -38,6 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _placeholder(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,28 +50,84 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 470),
+              constraints: const BoxConstraints(maxWidth: 430),
               child: Container(
-                color: Palette.bg.withOpacity(0.94),
+                color: Palette.bg.withOpacity(0.96),
                 child: Column(
                   children: [
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
                         children: [
                           _header(),
                           const SizedBox(height: 18),
                           _hero(),
                           const SizedBox(height: 14),
-                          _mainActions(),
+                          _BigAction(
+                            icon: Icons.camera_alt_rounded,
+                            title: _busy ? 'Checking photo…' : 'Scan a leaf',
+                            primary: true,
+                            onTap: _busy ? null : _openScan,
+                          ),
+                          const SizedBox(height: 10),
+                          _BigAction(
+                            icon: Icons.photo_library_rounded,
+                            title: 'Upload photo',
+                            onTap: _busy ? null : _pickGallery,
+                          ),
                           const SizedBox(height: 13),
                           _supportedCrops(),
-                          const SizedBox(height: 26),
-                          _sectionHeader('How it works'),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'How it works',
+                            style: TextStyle(
+                              fontFamily: 'Georgia',
+                              color: Palette.primaryDark,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
                           const SizedBox(height: 12),
-                          _howItWorks(),
+                          const Row(
+                            children: [
+                              Expanded(
+                                child: _StepCard(
+                                  number: '1',
+                                  icon: Icons.camera_alt_rounded,
+                                  title: 'Take photo',
+                                  text: 'Snap one clear leaf',
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: _StepCard(
+                                  number: '2',
+                                  icon: Icons.fact_check_rounded,
+                                  title: 'Check result',
+                                  text: 'See what we found',
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: _StepCard(
+                                  number: '3',
+                                  icon: Icons.spa_rounded,
+                                  title: 'Get guidance',
+                                  text: 'Follow simple advice',
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 18),
-                          _bottomCards(),
+                          const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _RecentResultCard()),
+                              SizedBox(width: 10),
+                              Expanded(child: _PhotoTipsCard()),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -83,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _header() {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Expanded(
           child: CropMedicBrand(compact: true, showTagline: false),
@@ -102,12 +162,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _hero() {
     const imageUrl =
-        'https://images.unsplash.com/photo-1762610744861-493bc400e80f?auto=format&fit=crop&w=1200&q=85';
+        'https://images.unsplash.com/photo-1598514982841-720dcb7f65bb?auto=format&fit=crop&w=1000&q=85';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: SizedBox(
-        height: 250,
+        height: 245,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -122,15 +182,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     end: Alignment.bottomRight,
                     colors: [Color(0xFFE9F2DF), Color(0xFFF7E6B8)],
                   ),
-                  child: const Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Icon(
-                        Icons.eco_rounded,
-                        size: 150,
-                        color: Color(0x664B8A56),
-                      ),
+                ),
+                child: const Align(
+                  alignment: Alignment.centerRight,
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Icon(
+                      Icons.eco_rounded,
+                      size: 145,
+                      color: Color(0x664B8A56),
                     ),
                   ),
                 ),
@@ -141,17 +201,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
-                  stops: [0, 0.52, 1],
+                  stops: [0, 0.58, 1],
                   colors: [
-                    Color(0xFFF7F7EFFF),
-                    Color(0xEEF3F5E7),
-                    Color(0x19FFFFFF),
+                    Color(0xFFF8F8F2),
+                    Color(0xEDF4F5E9),
+                    Color(0x1AFFFFFF),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(22, 24, 20, 22),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
@@ -159,13 +219,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'Healthy crops\nstart with\none photo',
                         style: TextStyle(
                           fontFamily: 'Georgia',
                           color: Palette.primaryDark,
-                          fontSize: 34,
+                          fontSize: 33,
                           height: 0.98,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -1.0,
@@ -176,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         'Find crop problems early and get expert guidance in seconds.',
                         style: TextStyle(
                           color: Palette.textDim,
-                          fontSize: 15.5,
+                          fontSize: 15,
                           height: 1.38,
                           fontWeight: FontWeight.w500,
                         ),
@@ -192,28 +252,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _mainActions() {
-    return Column(
-      children: [
-        _BigAction(
-          icon: Icons.camera_alt_rounded,
-          title: _busy ? 'Checking photo…' : 'Scan a leaf',
-          primary: true,
-          onTap: _busy ? null : _openScan,
-        ),
-        const SizedBox(height: 10),
-        _BigAction(
-          icon: Icons.photo_library_rounded,
-          title: 'Upload photo',
-          onTap: _busy ? null : _pickGallery,
-        ),
-      ],
-    );
-  }
-
   Widget _supportedCrops() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F5EE),
         borderRadius: BorderRadius.circular(22),
@@ -230,63 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _sectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontFamily: 'Georgia',
-        color: Palette.primaryDark,
-        fontSize: 27,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -0.4,
-      ),
-    );
-  }
-
-  Widget _howItWorks() {
-    return Row(
-      children: const [
-        Expanded(
-          child: _StepCard(
-            number: '1',
-            icon: Icons.camera_alt_rounded,
-            title: 'Take photo',
-            text: 'Snap a clear leaf photo',
-          ),
-        ),
-        SizedBox(width: 8),
-        Expanded(
-          child: _StepCard(
-            number: '2',
-            icon: Icons.fact_check_rounded,
-            title: 'Check result',
-            text: 'Get an instant diagnosis',
-          ),
-        ),
-        SizedBox(width: 8),
-        Expanded(
-          child: _StepCard(
-            number: '3',
-            icon: Icons.spa_rounded,
-            title: 'Get guidance',
-            text: 'Follow simple advice',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _bottomCards() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Expanded(child: _RecentResultCard()),
-        SizedBox(width: 10),
-        Expanded(child: _PhotoTipsCard()),
-      ],
-    );
-  }
-
   Widget _bottomNav() {
     return Container(
       decoration: const BoxDecoration(
@@ -300,10 +284,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
       child: Row(
         children: [
-          _NavItem(icon: Icons.home_rounded, label: 'Home', active: true),
+          const _NavItem(icon: Icons.home_rounded, label: 'Home', active: true),
           _NavItem(icon: Icons.camera_alt_outlined, label: 'Scan', onTap: _openScan),
           _NavItem(
             icon: Icons.history_rounded,
@@ -318,10 +302,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  void _placeholder(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 }
 
@@ -346,14 +326,14 @@ class _BigAction extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          height: 66,
+          height: 64,
           decoration: BoxDecoration(
             gradient: primary ? brandGradient : null,
             color: primary ? null : Palette.surface,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: primary ? Palette.primaryDark : Palette.primary,
-              width: primary ? 0 : 1.2,
+              width: primary ? 0 : 1.25,
             ),
             boxShadow: primary
                 ? const [
@@ -396,6 +376,7 @@ class _BigAction extends StatelessWidget {
 class _CropMini extends StatelessWidget {
   final String emoji;
   final String label;
+
   const _CropMini({required this.emoji, required this.label});
 
   @override
@@ -403,7 +384,7 @@ class _CropMini extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 25)),
+        Text(emoji, style: const TextStyle(fontSize: 24)),
         const SizedBox(height: 3),
         Text(
           label,
@@ -430,7 +411,7 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(9, 10, 9, 12),
+      padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF2F6EE),
         borderRadius: BorderRadius.circular(20),
@@ -453,7 +434,7 @@ class _StepCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Icon(icon, color: Palette.primary, size: 24),
+              Icon(icon, color: Palette.primary, size: 23),
             ],
           ),
           const SizedBox(height: 8),
@@ -463,7 +444,7 @@ class _StepCard extends StatelessWidget {
             style: const TextStyle(
               fontFamily: 'Georgia',
               fontWeight: FontWeight.w700,
-              fontSize: 13.5,
+              fontSize: 13,
             ),
           ),
           const SizedBox(height: 4),
@@ -514,7 +495,7 @@ class _RecentResultCard extends StatelessWidget {
               ),
             ),
             child: const Center(
-              child: Icon(Icons.eco_rounded, size: 55, color: Palette.primary),
+              child: Icon(Icons.eco_rounded, size: 54, color: Palette.primary),
             ),
           ),
           const SizedBox(height: 10),
@@ -524,27 +505,20 @@ class _RecentResultCard extends StatelessWidget {
             'Early Blight',
             style: TextStyle(color: Palette.alert, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
               color: Palette.primarySoft,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'View details',
-                  style: TextStyle(
-                    color: Palette.primaryDark,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(width: 3),
-                Icon(Icons.chevron_right_rounded, size: 15, color: Palette.primaryDark),
-              ],
+            child: const Text(
+              'View details ›',
+              style: TextStyle(
+                color: Palette.primaryDark,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -561,9 +535,9 @@ class _PhotoTipsCard extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.all(13),
       radius: 21,
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: const [
           Text(
             'Photo tips',
             style: TextStyle(
@@ -573,7 +547,7 @@ class _PhotoTipsCard extends StatelessWidget {
               color: Palette.primaryDark,
             ),
           ),
-          SizedBox(height: 11),
+          SizedBox(height: 10),
           _MiniTip(icon: Icons.wb_sunny_outlined, title: 'Good light'),
           _MiniTip(icon: Icons.eco_rounded, title: 'Whole leaf'),
           _MiniTip(icon: Icons.center_focus_strong_rounded, title: 'Clear focus'),
@@ -586,22 +560,23 @@ class _PhotoTipsCard extends StatelessWidget {
 class _MiniTip extends StatelessWidget {
   final IconData icon;
   final String title;
+
   const _MiniTip({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.only(bottom: 9),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 33,
+            height: 33,
             decoration: const BoxDecoration(
               color: Palette.primarySoft,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Palette.primary, size: 18),
+            child: Icon(icon, color: Palette.primary, size: 17),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -636,28 +611,28 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(vertical: 5),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 42,
-                height: 32,
+                width: 48,
+                height: 34,
                 decoration: BoxDecoration(
                   color: active ? Palette.primarySoft : Colors.transparent,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Icon(
                   icon,
-                  color: active ? Palette.primaryDark : const Color(0xFF455049),
+                  color: active ? Palette.primaryDark : Palette.textDim,
                   size: 22,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 3),
               Text(
                 label,
                 style: TextStyle(
-                  color: active ? Palette.primaryDark : const Color(0xFF455049),
+                  color: active ? Palette.primaryDark : Palette.textDim,
                   fontSize: 11.5,
                   fontWeight: active ? FontWeight.w800 : FontWeight.w500,
                 ),
