@@ -117,21 +117,21 @@ class OnboardingScreen extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  const Positioned(
+                                  Positioned(
                                     left: 18,
                                     bottom: 16,
                                     child: Container(
-                                      padding: EdgeInsets.symmetric(
+                                      padding: const EdgeInsets.symmetric(
                                         horizontal: 12,
                                         vertical: 8,
                                       ),
-                                      decoration: BoxDecoration(
+                                      decoration: const BoxDecoration(
                                         color: Color(0xEFFFFFFF),
                                         borderRadius: BorderRadius.all(
                                           Radius.circular(999),
                                         ),
                                       ),
-                                      child: Row(
+                                      child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
