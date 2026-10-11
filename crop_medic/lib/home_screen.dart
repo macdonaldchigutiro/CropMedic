@@ -363,57 +363,59 @@ class _BigAction extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        child: Ink(
+        child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 64),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: primary ? brandGradient : null,
-            color: primary ? null : Palette.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: primary ? Palette.primaryDark : Palette.primary,
-              width: primary ? 0 : 1.25,
-            ),
-            boxShadow: primary
-                ? const [
-                    BoxShadow(
-                      color: Color(0x25126044),
-                      blurRadius: 20,
-                      offset: Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: primary ? Colors.white : Palette.primaryDark,
-                size: 26,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: primary ? brandGradient : null,
+              color: primary ? null : Palette.surface,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: primary ? Palette.primaryDark : Palette.primary,
+                width: primary ? 0 : 1.25,
               ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'Georgia',
-                    color: primary ? Colors.white : Palette.primaryDark,
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
+              boxShadow: primary
+                  ? const [
+                      BoxShadow(
+                        color: Color(0x25126044),
+                        blurRadius: 20,
+                        offset: Offset(0, 8),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: primary ? Colors.white : Palette.primaryDark,
+                  size: 26,
+                ),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: 'Georgia',
+                      color: primary ? Colors.white : Palette.primaryDark,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: primary ? Colors.white : Palette.primaryDark,
-                size: 27,
-              ),
-            ],
+                const SizedBox(width: 10),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: primary ? Colors.white : Palette.primaryDark,
+                  size: 27,
+                ),
+              ],
+            ),
           ),
         ),
       ),
