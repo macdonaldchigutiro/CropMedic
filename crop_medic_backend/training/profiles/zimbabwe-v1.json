@@ -1,0 +1,23 @@
+{
+  "id": "zimbabwe-v1",
+  "country": "Zimbabwe",
+  "dataset": "PlantVillage",
+  "expected_class_count": 19,
+  "crop_prefixes": [
+    "Corn_(maize)___",
+    "Tomato___",
+    "Potato___",
+    "Pepper,_bell___"
+  ],
+  "languages": [
+    {"code": "en", "name": "English"},
+    {"code": "sn", "name": "Shona"},
+    {"code": "nd", "name": "Ndebele"},
+    {"code": "toi", "name": "Tonga"}
+  ],
+  "notes": [
+    "This is a bootstrap profile for Zimbabwe using PlantVillage only.",
+    "PlantVillage images are controlled/cleaner than ordinary field photos, so this profile is not sufficient evidence for production accuracy on its own.",
+    "Expand later with Zimbabwe field images and crops not covered by PlantVillage."
+  ]
+}
