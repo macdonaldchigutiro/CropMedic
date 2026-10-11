@@ -1,0 +1,242 @@
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import 'brand.dart';
+import 'diagnosis_flow.dart';
+import 'theme.dart';
+
+class ScanScreen extends StatefulWidget {
+  final String lang;
+  const ScanScreen({super.key, required this.lang});
+
+  @override
+  State<ScanScreen> createState() => _ScanScreenState();
+}
+
+class _ScanScreenState extends State<ScanScreen> {
+  final ImagePicker _picker = ImagePicker();
+  bool _busy = false;
+
+  Future<void> _pick(ImageSource source) async {
+    if (_busy) return;
+    final picked = await _picker.pickImage(
+      source: source,
+      maxWidth: 1280,
+      imageQuality: 88,
+    );
+    if (picked == null || !mounted) return;
+    final bytes = await picked.readAsBytes();
+    setState(() => _busy = true);
+    await startDiagnosisFlow(context, bytes, widget.lang);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: AppBackground(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const CropMedicBrand(compact: true, showTagline: false),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  const Text(
+                    'Scan a leaf',
+                    style: TextStyle(
+                      fontSize: 39,
+                      height: 1.02,
+                      fontWeight: FontWeight.w900,
+                      color: Palette.primaryDark,
+                      letterSpacing: -1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Place one leaf inside the frame.',
+                    style: TextStyle(color: Palette.textDim, fontSize: 17),
+                  ),
+                  const SizedBox(height: 20),
+                  AspectRatio(
+                    aspectRatio: 0.95,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFDDEDD5), Color(0xFFF4E4B7)],
+                        ),
+                      ),
+                      child: Stack(
+                        children: [
+                          const Center(
+                            child: Icon(Icons.eco_rounded, size: 180, color: Color(0xFF4A8B58)),
+                          ),
+                          Positioned.fill(
+                            child: CustomPaint(painter: _FramePainter()),
+                          ),
+                          const Positioned(
+                            left: 24,
+                            bottom: 22,
+                            child: Text(
+                              'One clear leaf • good light • steady camera',
+                              style: TextStyle(
+                                color: Palette.primaryDark,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Row(
+                    children: [
+                      Expanded(child: _Tip(icon: Icons.eco_rounded, title: 'Whole leaf', subtitle: 'Show the entire leaf')),
+                      SizedBox(width: 9),
+                      Expanded(child: _Tip(icon: Icons.wb_sunny_outlined, title: 'Good light', subtitle: 'Use daylight')),
+                      SizedBox(width: 9),
+                      Expanded(child: _Tip(icon: Icons.center_focus_strong_rounded, title: 'Clear focus', subtitle: 'Keep it sharp')),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _RoundAction(
+                        icon: Icons.home_rounded,
+                        label: 'Home',
+                        onTap: _busy ? null : () => Navigator.pop(context),
+                      ),
+                      GestureDetector(
+                        onTap: _busy ? null : () => _pick(ImageSource.camera),
+                        child: Container(
+                          width: 92,
+                          height: 92,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: brandGradient,
+                            border: Border.all(color: Palette.goldSoft, width: 7),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x22083D2F), blurRadius: 24, offset: Offset(0, 10)),
+                            ],
+                          ),
+                          child: _busy
+                              ? const Padding(
+                                  padding: EdgeInsets.all(27),
+                                  child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                                )
+                              : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 38),
+                        ),
+                      ),
+                      _RoundAction(
+                        icon: Icons.photo_library_rounded,
+                        label: 'Gallery',
+                        onTap: _busy ? null : () => _pick(ImageSource.gallery),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Tip extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  const _Tip({required this.icon, required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Palette.surfaceSoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: icon == Icons.wb_sunny_outlined ? Palette.gold : Palette.primary, size: 27),
+          const SizedBox(height: 7),
+          Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(color: Palette.textDim, fontSize: 11)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoundAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const _RoundAction({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Palette.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: Palette.border),
+            ),
+            child: Icon(icon, color: Palette.primaryDark),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(color: Palette.textDim, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
+class _FramePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    const m = 24.0;
+    const l = 44.0;
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(m, m + l)..lineTo(m, m)..lineTo(m + l, m)
+      ..moveTo(w - m - l, m)..lineTo(w - m, m)..lineTo(w - m, m + l)
+      ..moveTo(m, h - m - l)..lineTo(m, h - m)..lineTo(m + l, h - m)
+      ..moveTo(w - m - l, h - m)..lineTo(w - m, h - m)..lineTo(w - m, h - m - l);
+    canvas.drawPath(path, p);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
