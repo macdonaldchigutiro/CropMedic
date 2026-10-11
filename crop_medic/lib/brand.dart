@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'theme.dart';
@@ -11,56 +13,99 @@ class CropMedicMark extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Palette.primaryDark, Palette.primaryMid],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: size * 0.11,
-            left: size * 0.08,
-            child: Transform.rotate(
-              angle: -0.52,
-              child: Icon(
-                Icons.eco_rounded,
-                size: size * 0.64,
-                color: const Color(0xFFE8F4E3),
-              ),
-            ),
-          ),
-          Positioned(
-            top: size * 0.12,
-            child: Icon(
-              Icons.add_rounded,
-              size: size * 0.42,
-              color: Colors.white,
-            ),
-          ),
-          Positioned(
-            top: size * 0.01,
-            child: Container(
-              width: size * 0.58,
-              height: size * 0.11,
-              decoration: BoxDecoration(
-                color: Palette.gold,
-                borderRadius: BorderRadius.circular(size),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: CustomPaint(painter: _CropMedicMarkPainter()),
     );
   }
+}
+
+class _CropMedicMarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final leftLeaf = Path()
+      ..moveTo(w * .50, h * .90)
+      ..cubicTo(w * .28, h * .80, w * .10, h * .62, w * .12, h * .30)
+      ..cubicTo(w * .30, h * .33, w * .46, h * .48, w * .50, h * .90)
+      ..close();
+
+    final rightLeaf = Path()
+      ..moveTo(w * .50, h * .90)
+      ..cubicTo(w * .72, h * .80, w * .90, h * .62, w * .88, h * .30)
+      ..cubicTo(w * .70, h * .33, w * .54, h * .48, w * .50, h * .90)
+      ..close();
+
+    final leftPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [Color(0xFF083D2F), Color(0xFF176447)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final rightPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomRight,
+        end: Alignment.topLeft,
+        colors: [Color(0xFF2E714B), Color(0xFFA1B578)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    canvas.drawPath(leftLeaf, leftPaint);
+    canvas.drawPath(rightLeaf, rightPaint);
+
+    final vein = Paint()
+      ..color = const Color(0xFFF9F6EC)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * .055
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(Offset(w * .50, h * .89), Offset(w * .31, h * .46), vein);
+    canvas.drawLine(Offset(w * .50, h * .89), Offset(w * .69, h * .46), vein);
+
+    final gold = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFB98528), Color(0xFFE3C16A), Color(0xFFB98528)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * .075
+      ..strokeCap = StrokeCap.round;
+
+    final arcRect = Rect.fromCenter(
+      center: Offset(w * .50, h * .30),
+      width: w * .56,
+      height: h * .42,
+    );
+    canvas.drawArc(arcRect, math.pi * 1.12, math.pi * .76, false, gold);
+
+    final crossPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFE6C66F), Color(0xFFB78125)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
+
+    final cross = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(w * .50, h * .30),
+        width: w * .13,
+        height: h * .31,
+      ),
+      Radius.circular(w * .02),
+    );
+    final crossBar = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(w * .50, h * .30),
+        width: w * .31,
+        height: h * .13,
+      ),
+      Radius.circular(w * .02),
+    );
+    canvas.drawRRect(cross, crossPaint);
+    canvas.drawRRect(crossBar, crossPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class CropMedicBrand extends StatelessWidget {
@@ -74,12 +119,12 @@ class CropMedicBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final markSize = compact ? 38.0 : 50.0;
+    final markSize = compact ? 43.0 : 58.0;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         CropMedicMark(size: markSize),
-        SizedBox(width: compact ? 9 : 12),
+        SizedBox(width: compact ? 9 : 13),
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,11 +132,12 @@ class CropMedicBrand extends StatelessWidget {
             RichText(
               text: TextSpan(
                 style: TextStyle(
-                  fontSize: compact ? 20 : 27,
+                  fontFamily: 'Georgia',
+                  fontSize: compact ? 23 : 31,
                   height: 1,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   color: Palette.primaryDark,
-                  letterSpacing: -0.8,
+                  letterSpacing: -1.0,
                 ),
                 children: const [
                   TextSpan(text: 'Crop'),
@@ -109,7 +155,7 @@ class CropMedicBrand extends StatelessWidget {
                 style: TextStyle(
                   color: Palette.textDim,
                   fontSize: 12.5,
-                  letterSpacing: 0.2,
+                  letterSpacing: 0.8,
                 ),
               ),
             ],
@@ -142,18 +188,25 @@ class LanguagePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: Palette.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Palette.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0D0A2E20),
+            blurRadius: 16,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           onChanged: enabled ? onChanged : null,
           borderRadius: BorderRadius.circular(18),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 21),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
           items: languages.entries
               .map(
                 (entry) => DropdownMenuItem<String>(
@@ -161,7 +214,7 @@ class LanguagePill extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.language_rounded, size: 19),
+                      const Icon(Icons.language_rounded, size: 18),
                       const SizedBox(width: 7),
                       Text(entry.value),
                     ],
