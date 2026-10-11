@@ -12,6 +12,11 @@ env/
 *.sqlite3
 *.log
 
+# CropMedic training data / generated model artifacts
+crop_medic_backend/training/data/
+crop_medic_backend/training/artifacts/
+crop_medic_backend/backend/model/
+
 # Flutter / Dart
 .dart_tool/
 .packages
