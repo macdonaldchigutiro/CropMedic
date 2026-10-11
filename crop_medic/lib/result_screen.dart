@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -12,362 +11,452 @@ class ResultScreen extends StatelessWidget {
 
   const ResultScreen({super.key, required this.image, required this.diagnosis});
 
-  Color get _statusColor {
-    if (diagnosis.lowConfidence) return Palette.amber;
-    return diagnosis.isHealthy ? Palette.neonGreen : Palette.alert;
-  }
-
-  String get _statusLabel {
-    if (diagnosis.lowConfidence) return 'NEEDS A SECOND LOOK';
-    return diagnosis.isHealthy ? 'HEALTHY' : 'DISEASE DETECTED';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final title = diagnosis.isHealthy ? 'Healthy leaf' : diagnosis.disease;
-    final alternatives = diagnosis.topPredictions.length > 1
-        ? diagnosis.topPredictions.skip(1).toList()
-        : <PredictionCandidate>[];
-
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Row(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 820),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 36),
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                        color: Palette.text),
-                  ),
-                  const Text(
-                    'SCAN RESULT',
-                    style: TextStyle(
-                      color: Palette.textDim,
-                      letterSpacing: 3,
-                      fontSize: 12,
-                    ),
-                  ),
+                  _header(context),
+                  const SizedBox(height: 18),
+                  _imagePreview(),
+                  const SizedBox(height: 18),
+                  if (!diagnosis.accepted)
+                    _RejectedResult(onRetry: () => Navigator.pop(context), diagnosis: diagnosis)
+                  else
+                    _AcceptedResult(diagnosis: diagnosis),
+                  const SizedBox(height: 18),
+                  _scanAgainButton(context),
                 ],
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.memory(image, height: 180, fit: BoxFit.cover),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: _ConfidenceRing(
-                  value: diagnosis.confidence,
-                  color: _statusColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: _statusColor),
-                  ),
-                  child: Text(
-                    _statusLabel,
-                    style: TextStyle(
-                      color: _statusColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _header(BuildContext context) {
+    return Row(
+      children: [
+        IconButton.filledTonal(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Palette.text,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                ),
+                'Crop check',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 4),
               Text(
-                diagnosis.crop,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Palette.textDim),
+                'Your photo and CropMedic result',
+                style: TextStyle(color: Palette.textDim, fontSize: 13),
               ),
-              if (diagnosis.lowConfidence) ...[
-                const SizedBox(height: 16),
-                GlassCard(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, color: Palette.amber),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'The image is not conclusive enough for a confident result. '
-                          'Check the other possibilities below and confirm with an '
-                          'agronomist or extension officer before treatment.',
-                          style: TextStyle(color: Palette.text),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              if (alternatives.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const Text(
-                  'OTHER POSSIBILITIES',
-                  style: TextStyle(
-                    color: Palette.neonCyan,
-                    letterSpacing: 3,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                for (final candidate in alternatives)
-                  _AlternativeTile(candidate: candidate),
-              ],
-              const SizedBox(height: 24),
-              const Text(
-                'WHAT TO DO',
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: Palette.primarySoft,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome_rounded, size: 16, color: Palette.primary),
+              SizedBox(width: 5),
+              Text(
+                'AI assisted',
                 style: TextStyle(
-                  color: Palette.neonCyan,
-                  letterSpacing: 3,
-                  fontSize: 12,
+                  color: Palette.primaryDark,
                   fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              for (int i = 0; i < diagnosis.advice.length; i++)
-                _AdviceTile(index: i, text: diagnosis.advice[i]),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: neonGradient,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Palette.neonGreen.withOpacity(0.4),
-                        blurRadius: 20,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'SCAN ANOTHER LEAF',
-                      style: TextStyle(
-                        color: Palette.bg,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _imagePreview() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: AspectRatio(
+        aspectRatio: 16 / 7,
+        child: Image.memory(image, fit: BoxFit.cover),
+      ),
+    );
+  }
+
+  Widget _scanAgainButton(BuildContext context) {
+    return SizedBox(
+      height: 54,
+      child: FilledButton.icon(
+        onPressed: () => Navigator.pop(context),
+        style: FilledButton.styleFrom(
+          backgroundColor: Palette.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        icon: const Icon(Icons.camera_alt_rounded),
+        label: const Text(
+          'Check another photo',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
         ),
       ),
     );
   }
 }
 
-class _AlternativeTile extends StatelessWidget {
-  final PredictionCandidate candidate;
+class _RejectedResult extends StatelessWidget {
+  final VoidCallback onRetry;
+  final Diagnosis diagnosis;
 
-  const _AlternativeTile({required this.candidate});
+  const _RejectedResult({required this.onRetry, required this.diagnosis});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GlassCard(
+          color: const Color(0xFFFFFBF1),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFEBC4),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.photo_search_rounded,
+                  color: Palette.amber,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEBC4),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Text(
+                  'NO DIAGNOSIS MADE',
+                  style: TextStyle(
+                    color: Color(0xFF84580D),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'We couldn’t verify this photo as a supported crop leaf',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                diagnosis.message ??
+                    'Try again with one clear maize, tomato, potato or bell-pepper leaf.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Palette.textDim, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Try this for a better scan',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+              SizedBox(height: 14),
+              _RetryTip(icon: Icons.eco_rounded, text: 'Photograph one crop leaf only'),
+              _RetryTip(icon: Icons.center_focus_strong_rounded, text: 'Let the leaf fill most of the frame'),
+              _RetryTip(icon: Icons.wb_sunny_outlined, text: 'Use bright, even light and keep it sharp'),
+              _RetryTip(icon: Icons.block_rounded, text: 'Avoid faces, hands and unrelated objects'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RetryTip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _RetryTip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              color: Palette.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Palette.primary, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: const TextStyle(height: 1.35))),
+        ],
+      ),
+    );
+  }
+}
+
+class _AcceptedResult extends StatelessWidget {
+  final Diagnosis diagnosis;
+  const _AcceptedResult({required this.diagnosis});
+
+  @override
+  Widget build(BuildContext context) {
+    final healthy = diagnosis.isHealthy;
+    final statusColor = healthy ? Palette.primary : Palette.alert;
+    final statusBackground = healthy
+        ? Palette.primarySoft
+        : const Color(0xFFFFE8E8);
+    final title = healthy ? 'This leaf looks healthy' : diagnosis.disease;
+    final alternatives = diagnosis.topPredictions
+        .skip(1)
+        .where((candidate) => candidate.confidence >= 0.01)
+        .toList();
+
+    return Column(
+      children: [
+        GlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: statusBackground,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          healthy ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+                          color: statusColor,
+                          size: 17,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          healthy ? 'LOOKS HEALTHY' : 'CONDITION DETECTED',
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Palette.surfaceSoft,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: Text(
+                      '${(diagnosis.confidence * 100).round()}% confidence',
+                      style: const TextStyle(
+                        color: Palette.textDim,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  height: 1.1,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.7,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                diagnosis.crop,
+                style: const TextStyle(
+                  color: Palette.textDim,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (diagnosis.advice.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'What to do next',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 14),
+                for (int i = 0; i < diagnosis.advice.length; i++)
+                  _AdviceRow(index: i, text: diagnosis.advice[i]),
+              ],
+            ),
+          ),
+        ],
+        if (alternatives.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Other possibilities',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 5),
+                const Text(
+                  'Useful when symptoms overlap. These are not additional diagnoses.',
+                  style: TextStyle(color: Palette.textDim, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                for (final candidate in alternatives)
+                  _AlternativeRow(candidate: candidate),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF3F0),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFD3E6E0)),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline_rounded, color: Palette.accent),
+              SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  'CropMedic is an AI field assistant. Confirm important treatment decisions with an agronomist or extension officer, especially when symptoms are severe or unusual.',
+                  style: TextStyle(color: Palette.textDim, height: 1.4, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdviceRow extends StatelessWidget {
+  final int index;
+  final String text;
+  const _AdviceRow({required this.index, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Palette.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Palette.primaryDark,
+                fontWeight: FontWeight.w800,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: const TextStyle(height: 1.45))),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlternativeRow extends StatelessWidget {
+  final PredictionCandidate candidate;
+  const _AlternativeRow({required this.candidate});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: GlassCard(
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    candidate.disease,
-                    style: const TextStyle(
-                      color: Palette.text,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    candidate.crop,
-                    style: const TextStyle(
-                      color: Palette.textDim,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              '${(candidate.confidence * 100).round()}%',
-              style: const TextStyle(
-                color: Palette.neonCyan,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AdviceTile extends StatelessWidget {
-  final int index;
-  final String text;
-  const _AdviceTile({required this.index, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: Duration(milliseconds: 500 + index * 250),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, child) => Opacity(
-        opacity: t,
-        child: Transform.translate(offset: Offset(0, 16 * (1 - t)), child: child),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: GlassCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 26,
-                height: 26,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Palette.neonGreen),
-                ),
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    color: Palette.neonGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  text,
-                  style: const TextStyle(color: Palette.text, height: 1.4),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ConfidenceRing extends StatelessWidget {
-  final double value;
-  final Color color;
-  const _ConfidenceRing({required this.value, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value),
-      duration: const Duration(milliseconds: 1300),
-      curve: Curves.easeOutCubic,
-      builder: (context, v, _) {
-        return SizedBox(
-          width: 160,
-          height: 160,
-          child: CustomPaint(
-            painter: _RingPainter(v, color),
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${(v * 100).round()}%',
-                    style: const TextStyle(
-                      color: Palette.text,
-                      fontSize: 38,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Text(
-                    'CONFIDENCE',
-                    style: TextStyle(
-                      color: Palette.textDim,
-                      fontSize: 10,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ],
-              ),
+      child: Row(
+        children: [
+          const Icon(Icons.circle, size: 8, color: Palette.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${candidate.crop} · ${candidate.disease}',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-        );
-      },
+          Text(
+            '${(candidate.confidence * 100).round()}%',
+            style: const TextStyle(
+              color: Palette.textDim,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
-}
-
-class _RingPainter extends CustomPainter {
-  final double value;
-  final Color color;
-  _RingPainter(this.value, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.width / 2 - 12;
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
-    final track = Paint()
-      ..color = Palette.glassBorder
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 12;
-    canvas.drawCircle(center, radius, track);
-
-    final sweep = 2 * math.pi * value;
-
-    final glow = Paint()
-      ..color = color.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 18
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawArc(rect, -math.pi / 2, sweep, false, glow);
-
-    final arc = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, -math.pi / 2, sweep, false, arc);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RingPainter old) =>
-      old.value != value || old.color != color;
 }
