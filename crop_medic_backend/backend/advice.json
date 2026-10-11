@@ -6,7 +6,8 @@
       "Avoid moving plant material from affected plants to healthy ones."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   },
   "_healthy": {
     "en": [
@@ -14,7 +15,8 @@
       "Keep scouting your field regularly, especially after rain."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   },
   "Corn_(maize)___Northern_Leaf_Blight": {
     "en": [
@@ -23,7 +25,8 @@
       "Rotate crops next season and avoid planting maize in the same field."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   },
   "Corn_(maize)___Common_rust_": {
     "en": [
@@ -32,7 +35,8 @@
       "Plant resistant varieties next season."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   },
   "Tomato___Early_blight": {
     "en": [
@@ -41,7 +45,8 @@
       "Ask your agro-dealer about a recommended fungicide."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   },
   "Tomato___Late_blight": {
     "en": [
@@ -50,6 +55,7 @@
       "Ask your agro-dealer about a recommended fungicide."
     ],
     "sn": [],
-    "nd": []
+    "nd": [],
+    "toi": []
   }
 }
