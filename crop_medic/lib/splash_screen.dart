@@ -1,8 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'brand.dart';
+import 'home_screen.dart';
 import 'onboarding_screen.dart';
 import 'theme.dart';
 
@@ -14,23 +14,22 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  Timer? _timer;
-
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(milliseconds: 1400), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-      );
-    });
+    _routeFromSplash();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
+  Future<void> _routeFromSplash() async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final prefs = await SharedPreferences.getInstance();
+    final seenOnboarding = prefs.getBool('cropmedic_seen_onboarding') ?? false;
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => seenOnboarding ? const HomeScreen() : const OnboardingScreen(),
+      ),
+    );
   }
 
   @override
