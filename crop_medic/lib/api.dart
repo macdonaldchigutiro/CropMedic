@@ -30,43 +30,52 @@ class PredictionCandidate {
 
   factory PredictionCandidate.fromJson(Map<String, dynamic> json) {
     return PredictionCandidate(
-      crop: json['crop'] as String,
-      disease: json['disease'] as String,
+      crop: (json['crop'] as String?) ?? '',
+      disease: (json['disease'] as String?) ?? '',
       confidence: (json['confidence'] as num).toDouble(),
     );
   }
 }
 
 class Diagnosis {
+  final bool accepted;
   final String crop;
   final String disease;
   final double confidence;
   final bool lowConfidence;
+  final String? message;
   final List<String> advice;
   final List<PredictionCandidate> topPredictions;
   final bool demo;
 
   Diagnosis({
+    required this.accepted,
     required this.crop,
     required this.disease,
     required this.confidence,
     required this.lowConfidence,
+    required this.message,
     required this.advice,
     required this.topPredictions,
     required this.demo,
   });
 
-  bool get isHealthy => disease.toLowerCase() == 'healthy';
+  bool get isHealthy => accepted && disease.toLowerCase() == 'healthy';
 
   factory Diagnosis.fromJson(Map<String, dynamic> json) {
     final ranked = json['top_predictions'] as List<dynamic>? ?? const [];
+    final accepted = (json['accepted'] as bool?) ?? true;
 
     return Diagnosis(
-      crop: json['crop'] as String,
-      disease: json['disease'] as String,
+      accepted: accepted,
+      crop: (json['crop'] as String?) ?? '',
+      disease: (json['disease'] as String?) ?? '',
       confidence: (json['confidence'] as num).toDouble(),
-      lowConfidence: json['low_confidence'] as bool,
-      advice: (json['advice'] as List).map((e) => e.toString()).toList(),
+      lowConfidence: (json['low_confidence'] as bool?) ?? !accepted,
+      message: json['message'] as String?,
+      advice: (json['advice'] as List<dynamic>? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
       topPredictions: ranked
           .map((e) => PredictionCandidate.fromJson(
                 Map<String, dynamic>.from(e as Map),
