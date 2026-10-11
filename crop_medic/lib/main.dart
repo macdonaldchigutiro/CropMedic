@@ -167,34 +167,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _languagePicker() {
-    const langs = {'en': 'English', 'sn': 'Shona', 'nd': 'Ndebele'};
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    const langs = {
+      'en': 'English',
+      'sn': 'Shona',
+      'nd': 'Ndebele',
+      'toi': 'Tonga',
+    };
+
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8,
+      runSpacing: 8,
       children: langs.entries.map((e) {
         final selected = _lang == e.key;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: GestureDetector(
-            onTap: () => setState(() => _lang = e.key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected
-                    ? Palette.neonGreen.withOpacity(0.15)
-                    : Palette.glass,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? Palette.neonGreen : Palette.glassBorder,
-                ),
+        return GestureDetector(
+          onTap: () => setState(() => _lang = e.key),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected
+                  ? Palette.neonGreen.withOpacity(0.15)
+                  : Palette.glass,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected ? Palette.neonGreen : Palette.glassBorder,
               ),
-              child: Text(
-                e.value,
-                style: TextStyle(
-                  color: selected ? Palette.neonGreen : Palette.textDim,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+            ),
+            child: Text(
+              e.value,
+              style: TextStyle(
+                color: selected ? Palette.neonGreen : Palette.textDim,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
