@@ -6,14 +6,13 @@ Expected dataset layout:
       Corn_(maize)___Northern_Leaf_Blight/
         image1.jpg
         ...
-      Corn_(maize)___healthy/
-        ...
       Tomato___Early_blight/
         ...
 
-The script creates deterministic, per-class train/validation/test splits so the
-final test set is never used to tune the model. It exports a Keras model,
-TFLite model, class names, and per-class evaluation metrics.
+When data/plantvillage_manifest.json is present, the script preserves the
+official PlantVillage test split and creates validation data only from the
+official training split. For other datasets it falls back to deterministic,
+per-class train/validation/test splits.
 
 Example:
     python train.py --data-dir data --output-dir artifacts
@@ -35,6 +34,7 @@ IMG_SIZE = 224
 DEFAULT_BATCH = 32
 DEFAULT_SEED = 42
 VALID_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+MANIFEST_NAME = "plantvillage_manifest.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,6 +78,17 @@ def discover_dataset(data_dir: Path) -> tuple[list[str], dict[str, list[Path]]]:
     return list(classes.keys()), classes
 
 
+def shuffle_split(
+    paths: list[str], labels: list[int], seed: int
+) -> tuple[list[str], list[int]]:
+    paired = list(zip(paths, labels))
+    random.Random(seed).shuffle(paired)
+    if not paired:
+        return [], []
+    shuffled_paths, shuffled_labels = zip(*paired)
+    return list(shuffled_paths), list(shuffled_labels)
+
+
 def stratified_split(
     classes: dict[str, list[Path]],
     class_names: list[str],
@@ -117,14 +128,88 @@ def stratified_split(
             paths.extend(str(path) for path in split_files)
             labels.extend([label] * len(split_files))
 
-    # Shuffle each split deterministically so classes are interleaved.
     for offset, split_name in enumerate(("train", "validation", "test")):
         paths, labels = splits[split_name]
-        paired = list(zip(paths, labels))
-        random.Random(seed + offset + 1).shuffle(paired)
-        if paired:
-            new_paths, new_labels = zip(*paired)
-            splits[split_name] = (list(new_paths), list(new_labels))
+        splits[split_name] = shuffle_split(paths, labels, seed + offset + 1)
+
+    return splits
+
+
+def split_from_plantvillage_manifest(
+    data_dir: Path,
+    class_names: list[str],
+    validation_fraction: float,
+    seed: int,
+) -> dict[str, tuple[list[str], list[int]]]:
+    if validation_fraction <= 0 or validation_fraction >= 0.5:
+        raise ValueError("Validation fraction must be greater than 0 and less than 0.5.")
+
+    manifest_path = data_dir / MANIFEST_NAME
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    records = payload.get("records") or []
+    if not records:
+        raise ValueError(f"{manifest_path} contains no records.")
+
+    class_to_label = {name: index for index, name in enumerate(class_names)}
+    official_train: dict[str, list[Path]] = {name: [] for name in class_names}
+    official_test: dict[str, list[Path]] = {name: [] for name in class_names}
+
+    for record in records:
+        class_name = record.get("class_name")
+        source_split = record.get("source_split")
+        relative_path = record.get("path")
+        if class_name not in class_to_label:
+            raise ValueError(f"Manifest contains unknown class: {class_name}")
+        if source_split not in {"train", "test"}:
+            raise ValueError(f"Manifest contains invalid source split: {source_split}")
+        if not relative_path:
+            raise ValueError("Manifest contains a record without a path.")
+
+        image_path = data_dir / Path(relative_path)
+        if not image_path.exists():
+            raise FileNotFoundError(f"Manifest image is missing: {image_path}")
+
+        target = official_train if source_split == "train" else official_test
+        target[class_name].append(image_path)
+
+    splits: dict[str, tuple[list[str], list[int]]] = {
+        "train": ([], []),
+        "validation": ([], []),
+        "test": ([], []),
+    }
+
+    for label, class_name in enumerate(class_names):
+        train_candidates = list(official_train[class_name])
+        test_files = list(official_test[class_name])
+        if len(train_candidates) < 2:
+            raise ValueError(
+                f"Official PlantVillage train split has too few images for {class_name}."
+            )
+        if not test_files:
+            raise ValueError(
+                f"Official PlantVillage test split has no images for {class_name}."
+            )
+
+        random.Random(seed + label).shuffle(train_candidates)
+        validation_count = max(1, int(round(len(train_candidates) * validation_fraction)))
+        if validation_count >= len(train_candidates):
+            validation_count = len(train_candidates) - 1
+
+        validation_files = train_candidates[:validation_count]
+        train_files = train_candidates[validation_count:]
+
+        for split_name, split_files in (
+            ("train", train_files),
+            ("validation", validation_files),
+            ("test", test_files),
+        ):
+            paths, labels = splits[split_name]
+            paths.extend(str(path) for path in split_files)
+            labels.extend([label] * len(split_files))
+
+    for offset, split_name in enumerate(("train", "validation", "test")):
+        paths, labels = splits[split_name]
+        splits[split_name] = shuffle_split(paths, labels, seed + 100 + offset)
 
     return splits
 
@@ -241,13 +326,25 @@ def main() -> None:
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     class_names, classes = discover_dataset(args.data_dir)
-    splits = stratified_split(
-        classes,
-        class_names,
-        args.validation_fraction,
-        args.test_fraction,
-        args.seed,
-    )
+    manifest_path = args.data_dir / MANIFEST_NAME
+    if manifest_path.exists():
+        print(f"Using official PlantVillage split manifest: {manifest_path}")
+        splits = split_from_plantvillage_manifest(
+            args.data_dir,
+            class_names,
+            args.validation_fraction,
+            args.seed,
+        )
+        split_strategy = "plantvillage_official_test"
+    else:
+        splits = stratified_split(
+            classes,
+            class_names,
+            args.validation_fraction,
+            args.test_fraction,
+            args.seed,
+        )
+        split_strategy = "deterministic_per_class"
 
     train_paths, train_labels = splits["train"]
     validation_paths, validation_labels = splits["validation"]
@@ -258,6 +355,8 @@ def main() -> None:
         f"Split: train={len(train_paths)}, validation={len(validation_paths)}, "
         f"test={len(test_paths)}"
     )
+    if split_strategy == "plantvillage_official_test":
+        print("Held-out test set: official PlantVillage color test split")
 
     train_ds = make_dataset(
         train_paths, train_labels, args.batch_size, training=True, seed=args.seed
@@ -321,9 +420,12 @@ def main() -> None:
     model.save(keras_path)
     classes_path.write_text(json.dumps(class_names, indent=2), encoding="utf-8")
 
+    macro_f1 = float(np.mean([item["f1"] for item in report.values()]))
     metrics = {
         "test_loss": round(float(test_loss), 6),
         "test_accuracy": round(float(test_accuracy), 6),
+        "macro_f1": round(macro_f1, 6),
+        "split_strategy": split_strategy,
         "confusion_matrix": matrix,
         "per_class": report,
     }
@@ -334,12 +436,14 @@ def main() -> None:
         "image_size": IMG_SIZE,
         "class_count": len(class_names),
         "seed": args.seed,
+        "split_strategy": split_strategy,
         "splits": {
             "train": len(train_paths),
             "validation": len(validation_paths),
             "test": len(test_paths),
         },
         "test_accuracy": round(float(test_accuracy), 6),
+        "macro_f1": round(macro_f1, 6),
     }
     metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
@@ -347,7 +451,6 @@ def main() -> None:
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     tflite_path.write_bytes(converter.convert())
 
-    macro_f1 = float(np.mean([item["f1"] for item in report.values()]))
     print(f"Held-out test accuracy: {test_accuracy:.4f}")
     print(f"Macro F1: {macro_f1:.4f}")
     print(f"Artifacts written to: {args.output_dir.resolve()}")
