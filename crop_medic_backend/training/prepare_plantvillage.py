@@ -18,9 +18,17 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
+import time
 import zipfile
 from collections import Counter
 from pathlib import Path, PurePosixPath
+
+# Hugging Face's default timeout is too short for a multi-GB archive on a
+# variable connection. Set this before importing huggingface_hub so its client
+# uses the longer timeout. Existing partial downloads in the HF cache are reused.
+os.environ.setdefault("HF_HUB_DOWNLOAD_TIMEOUT", "120")
+os.environ.setdefault("HF_HUB_ETAG_TIMEOUT", "30")
 
 from huggingface_hub import hf_hub_download
 from PIL import Image
@@ -32,6 +40,8 @@ ARCHIVE_FILE = "data.zip"
 TRAIN_SPLIT_FILE = "splits/color_train.txt"
 TEST_SPLIT_FILE = "splits/color_test.txt"
 MANIFEST_NAME = "plantvillage_manifest.json"
+DOWNLOAD_ATTEMPTS = 8
+RETRY_WAIT_SECONDS = 15
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,12 +63,38 @@ def load_profile(name: str) -> dict:
 
 
 def download_repo_file(filename: str) -> Path:
-    path = hf_hub_download(
-        repo_id=DATASET_ID,
-        filename=filename,
-        repo_type="dataset",
-    )
-    return Path(path)
+    """Download one dataset file, resuming cached partial downloads after drops."""
+    last_error: Exception | None = None
+
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            path = hf_hub_download(
+                repo_id=DATASET_ID,
+                filename=filename,
+                repo_type="dataset",
+            )
+            return Path(path)
+        except Exception as exc:
+            last_error = exc
+            if attempt == DOWNLOAD_ATTEMPTS:
+                break
+
+            print(
+                f"\nDownload interrupted for {filename} "
+                f"(attempt {attempt}/{DOWNLOAD_ATTEMPTS})."
+            )
+            print(
+                "The partial Hugging Face cache is kept; the next attempt will "
+                "resume it when possible."
+            )
+            print(f"Retrying in {RETRY_WAIT_SECONDS} seconds...\n")
+            time.sleep(RETRY_WAIT_SECONDS)
+
+    raise RuntimeError(
+        f"Could not finish downloading {filename} after {DOWNLOAD_ATTEMPTS} attempts. "
+        "Your partial download remains cached, so rerunning this script later should "
+        "resume rather than restart."
+    ) from last_error
 
 
 def read_split_file(path: Path) -> list[str]:
@@ -101,6 +137,7 @@ def main() -> None:
 
     print("Downloading PlantVillage color archive and official splits from Hugging Face...")
     print("The archive is about 2.2 GB on first download; cached downloads are reused.")
+    print("Interrupted downloads are retried and resumed from the Hugging Face cache.")
 
     train_split_path = download_repo_file(TRAIN_SPLIT_FILE)
     test_split_path = download_repo_file(TEST_SPLIT_FILE)
