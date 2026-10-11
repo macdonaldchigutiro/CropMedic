@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import 'brand.dart';
 import 'diagnosis_flow.dart';
+import 'localization.dart';
 import 'scan_screen.dart';
 import 'theme.dart';
 
@@ -17,6 +18,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ImagePicker _picker = ImagePicker();
   String _lang = 'en';
   bool _busy = false;
+
+  String tr(String key) => AppText.t(_lang, key);
 
   Future<void> _pickGallery() async {
     if (_busy) return;
@@ -65,22 +68,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 14),
                           _BigAction(
                             icon: Icons.camera_alt_rounded,
-                            title: _busy ? 'Checking photo…' : 'Scan a leaf',
+                            title: _busy ? tr('checkingPhoto') : tr('scanLeaf'),
                             primary: true,
                             onTap: _busy ? null : _openScan,
                           ),
                           const SizedBox(height: 10),
                           _BigAction(
                             icon: Icons.photo_library_rounded,
-                            title: 'Upload photo',
+                            title: tr('uploadPhoto'),
                             onTap: _busy ? null : _pickGallery,
                           ),
                           const SizedBox(height: 13),
                           _supportedCrops(),
                           const SizedBox(height: 24),
-                          const Text(
-                            'How it works',
-                            style: TextStyle(
+                          Text(
+                            tr('howItWorks'),
+                            style: const TextStyle(
                               fontFamily: 'Georgia',
                               color: Palette.primaryDark,
                               fontSize: 26,
@@ -89,43 +92,55 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Row(
+                          Row(
                             children: [
                               Expanded(
                                 child: _StepCard(
                                   number: '1',
                                   icon: Icons.camera_alt_rounded,
-                                  title: 'Take photo',
-                                  text: 'Snap one clear leaf',
+                                  title: tr('takePhoto'),
+                                  text: tr('takePhotoDesc'),
                                 ),
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: _StepCard(
                                   number: '2',
                                   icon: Icons.fact_check_rounded,
-                                  title: 'Check result',
-                                  text: 'See what we found',
+                                  title: tr('checkResult'),
+                                  text: tr('checkResultDesc'),
                                 ),
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               Expanded(
                                 child: _StepCard(
                                   number: '3',
                                   icon: Icons.spa_rounded,
-                                  title: 'Get guidance',
-                                  text: 'Follow simple advice',
+                                  title: tr('getGuidance'),
+                                  text: tr('getGuidanceDesc'),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 18),
-                          const Row(
+                          Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: _RecentResultCard()),
-                              SizedBox(width: 10),
-                              Expanded(child: _PhotoTipsCard()),
+                              Expanded(
+                                child: _RecentResultCard(
+                                  title: tr('recentResult'),
+                                  viewDetails: tr('viewDetails'),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _PhotoTipsCard(
+                                  title: tr('photoTips'),
+                                  goodLight: tr('goodLight'),
+                                  wholeLeaf: tr('wholeLeaf'),
+                                  clearFocus: tr('clearFocus'),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -153,7 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
           value: _lang,
           enabled: !_busy,
           onChanged: (value) {
-            if (value != null) setState(() => _lang = value);
+            if (value != null) {
+              setState(() => _lang = value);
+            }
           },
         ),
       ],
@@ -162,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _hero() {
     const imageUrl =
-        'https://images.unsplash.com/photo-1598514982841-720dcb7f65bb?auto=format&fit=crop&w=1000&q=85';
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85';
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
@@ -210,8 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(22, 24, 20, 22),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 24, 20, 22),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
@@ -221,8 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Healthy crops\nstart with\none photo',
-                        style: TextStyle(
+                        tr('heroTitle'),
+                        style: const TextStyle(
                           fontFamily: 'Georgia',
                           color: Palette.primaryDark,
                           fontSize: 33,
@@ -231,10 +248,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           letterSpacing: -1.0,
                         ),
                       ),
-                      SizedBox(height: 13),
+                      const SizedBox(height: 13),
                       Text(
-                        'Find crop problems early and get expert guidance in seconds.',
-                        style: TextStyle(
+                        tr('heroSubtitle'),
+                        style: const TextStyle(
                           color: Palette.textDim,
                           fontSize: 15,
                           height: 1.38,
@@ -287,17 +304,17 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
       child: Row(
         children: [
-          const _NavItem(icon: Icons.home_rounded, label: 'Home', active: true),
-          _NavItem(icon: Icons.camera_alt_outlined, label: 'Scan', onTap: _openScan),
+          _NavItem(icon: Icons.home_rounded, label: tr('home'), active: true),
+          _NavItem(icon: Icons.camera_alt_outlined, label: tr('scan'), onTap: _openScan),
           _NavItem(
             icon: Icons.history_rounded,
-            label: 'History',
-            onTap: () => _placeholder('History is coming next.'),
+            label: tr('history'),
+            onTap: () => _placeholder(tr('historyComing')),
           ),
           _NavItem(
             icon: Icons.help_outline_rounded,
-            label: 'Help',
-            onTap: () => _placeholder('Help is coming next.'),
+            label: tr('help'),
+            onTap: () => _placeholder(tr('helpComing')),
           ),
         ],
       ),
@@ -350,13 +367,18 @@ class _BigAction extends StatelessWidget {
             children: [
               Icon(icon, color: primary ? Colors.white : Palette.primaryDark, size: 27),
               const SizedBox(width: 13),
-              Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Georgia',
-                  color: primary ? Colors.white : Palette.primaryDark,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    color: primary ? Colors.white : Palette.primaryDark,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(width: 13),
@@ -441,6 +463,7 @@ class _StepCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
+            maxLines: 2,
             style: const TextStyle(
               fontFamily: 'Georgia',
               fontWeight: FontWeight.w700,
@@ -451,6 +474,7 @@ class _StepCard extends StatelessWidget {
           Text(
             text,
             textAlign: TextAlign.center,
+            maxLines: 3,
             style: const TextStyle(
               color: Palette.textDim,
               fontSize: 10.5,
@@ -464,7 +488,10 @@ class _StepCard extends StatelessWidget {
 }
 
 class _RecentResultCard extends StatelessWidget {
-  const _RecentResultCard();
+  final String title;
+  final String viewDetails;
+
+  const _RecentResultCard({required this.title, required this.viewDetails});
 
   @override
   Widget build(BuildContext context) {
@@ -474,9 +501,9 @@ class _RecentResultCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recent result',
-            style: TextStyle(
+          Text(
+            title,
+            style: const TextStyle(
               fontFamily: 'Georgia',
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -512,9 +539,9 @@ class _RecentResultCard extends StatelessWidget {
               color: Palette.primarySoft,
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              'View details ›',
-              style: TextStyle(
+            child: Text(
+              viewDetails,
+              style: const TextStyle(
                 color: Palette.primaryDark,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -528,7 +555,17 @@ class _RecentResultCard extends StatelessWidget {
 }
 
 class _PhotoTipsCard extends StatelessWidget {
-  const _PhotoTipsCard();
+  final String title;
+  final String goodLight;
+  final String wholeLeaf;
+  final String clearFocus;
+
+  const _PhotoTipsCard({
+    required this.title,
+    required this.goodLight,
+    required this.wholeLeaf,
+    required this.clearFocus,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -537,20 +574,20 @@ class _PhotoTipsCard extends StatelessWidget {
       radius: 21,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Text(
-            'Photo tips',
-            style: TextStyle(
+            title,
+            style: const TextStyle(
               fontFamily: 'Georgia',
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Palette.primaryDark,
             ),
           ),
-          SizedBox(height: 10),
-          _MiniTip(icon: Icons.wb_sunny_outlined, title: 'Good light'),
-          _MiniTip(icon: Icons.eco_rounded, title: 'Whole leaf'),
-          _MiniTip(icon: Icons.center_focus_strong_rounded, title: 'Clear focus'),
+          const SizedBox(height: 10),
+          _MiniTip(icon: Icons.wb_sunny_outlined, title: goodLight),
+          _MiniTip(icon: Icons.eco_rounded, title: wholeLeaf),
+          _MiniTip(icon: Icons.center_focus_strong_rounded, title: clearFocus),
         ],
       ),
     );
@@ -631,6 +668,8 @@ class _NavItem extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
                 style: TextStyle(
                   color: active ? Palette.primaryDark : Palette.textDim,
                   fontSize: 11.5,
