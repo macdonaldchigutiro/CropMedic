@@ -1,31 +1,37 @@
 """Download and prepare PlantVillage for a CropMedic training profile.
 
+This downloader deliberately bypasses the Hugging Face Datasets config loader.
+The PlantVillage repository currently exposes the archive and official split
+files directly, which is more stable than relying on dataset config discovery.
+
 Example:
-    python -m pip install -r requirements-training.txt
     python prepare_plantvillage.py --profile zimbabwe-v1 --output-dir data
 
-The script uses the maintained Hugging Face PlantVillage dataset rather than
-TensorFlow Datasets' legacy Mendeley download URL. It exports only classes in
-the selected CropMedic profile into class folders expected by train.py.
-
-A manifest is also written with the original Hugging Face split and leaf_id so
-we can preserve leaf-grouped evaluation as the training pipeline evolves.
+The script downloads the PlantVillage archive from Hugging Face, reads the
+official color_train/color_test split files, exports only classes included by
+the selected CropMedic profile, and writes a manifest that preserves the
+official test split for train.py.
 """
 
 from __future__ import annotations
 
 import argparse
-import csv
+import io
 import json
+import zipfile
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
-from datasets import load_dataset
+from huggingface_hub import hf_hub_download
+from PIL import Image
 
 BASE = Path(__file__).parent
 PROFILES_DIR = BASE / "profiles"
 DATASET_ID = "mohanty/PlantVillage"
-DATASET_CONFIG = "color"
+ARCHIVE_FILE = "data.zip"
+TRAIN_SPLIT_FILE = "splits/color_train.txt"
+TEST_SPLIT_FILE = "splits/color_test.txt"
+MANIFEST_NAME = "plantvillage_manifest.json"
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,13 +52,45 @@ def load_profile(name: str) -> dict:
     return profile
 
 
-def label_name(example: dict, label_names: list[str] | None) -> str:
-    label = example["label"]
-    if isinstance(label, str):
-        return label
-    if label_names is None:
-        raise RuntimeError("PlantVillage label metadata is unavailable.")
-    return label_names[int(label)]
+def download_repo_file(filename: str) -> Path:
+    path = hf_hub_download(
+        repo_id=DATASET_ID,
+        filename=filename,
+        repo_type="dataset",
+    )
+    return Path(path)
+
+
+def read_split_file(path: Path) -> list[str]:
+    return [
+        line.strip().replace("\\", "/")
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+
+def class_name_from_source_path(source_path: str) -> str:
+    parts = PurePosixPath(source_path).parts
+    if len(parts) < 4 or parts[0] != "raw" or parts[1] != "color":
+        raise ValueError(f"Unexpected PlantVillage color path: {source_path}")
+    return parts[2]
+
+
+def selected_records(
+    source_paths: list[str], source_split: str, prefixes: tuple[str, ...]
+) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    for source_path in source_paths:
+        class_name = class_name_from_source_path(source_path)
+        if class_name.startswith(prefixes):
+            records.append(
+                {
+                    "source_split": source_split,
+                    "source_path": source_path,
+                    "class_name": class_name,
+                }
+            )
+    return records
 
 
 def main() -> None:
@@ -61,79 +99,108 @@ def main() -> None:
     prefixes = tuple(profile["crop_prefixes"])
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Downloading/loading {DATASET_ID} ({DATASET_CONFIG}) via Hugging Face...")
-    dataset = load_dataset(DATASET_ID, DATASET_CONFIG)
+    print("Downloading PlantVillage color archive and official splits from Hugging Face...")
+    print("The archive is about 2.2 GB on first download; cached downloads are reused.")
 
-    if "train" not in dataset:
-        raise RuntimeError("PlantVillage did not expose the expected train split.")
+    train_split_path = download_repo_file(TRAIN_SPLIT_FILE)
+    test_split_path = download_repo_file(TEST_SPLIT_FILE)
+    archive_path = download_repo_file(ARCHIVE_FILE)
 
-    label_feature = dataset["train"].features.get("label")
-    label_names = getattr(label_feature, "names", None)
+    records = selected_records(read_split_file(train_split_path), "train", prefixes)
+    records.extend(selected_records(read_split_file(test_split_path), "test", prefixes))
 
-    if label_names:
-        selected_names = sorted(name for name in label_names if name.startswith(prefixes))
-    else:
-        discovered = set()
-        for split in dataset.values():
-            for example in split:
-                name = label_name(example, None)
-                if name.startswith(prefixes):
-                    discovered.add(name)
-        selected_names = sorted(discovered)
-
+    selected_names = sorted({record["class_name"] for record in records})
     expected_count = profile.get("expected_class_count")
     if expected_count is not None and len(selected_names) != int(expected_count):
         raise RuntimeError(
-            f"Profile expected {expected_count} classes but PlantVillage exposed "
-            f"{len(selected_names)} selected classes. Selected: {selected_names}"
+            f"Profile expected {expected_count} classes but the official color splits "
+            f"contained {len(selected_names)} selected classes. Selected: {selected_names}"
         )
 
-    counters: Counter[str] = Counter()
-    manifest_rows: list[dict[str, str]] = []
-    print(f"Preparing {len(selected_names)} selected classes for {profile['id']}...")
+    if not records:
+        raise RuntimeError("No PlantVillage images matched the selected profile.")
 
-    for split_name, split in dataset.items():
-        print(f"Processing source split: {split_name} ({len(split)} rows)")
-        for example in split:
-            class_name = label_name(example, label_names)
-            if not class_name.startswith(prefixes):
-                continue
+    counters: Counter[tuple[str, str]] = Counter()
+    class_totals: Counter[str] = Counter()
+    split_totals: Counter[str] = Counter()
+    manifest_records: list[dict[str, str]] = []
+
+    print(f"Exporting {len(selected_names)} classes for {profile['id']}...")
+
+    with zipfile.ZipFile(archive_path, "r") as archive:
+        archive_names = set(archive.namelist())
+        missing_sources = [
+            record["source_path"]
+            for record in records
+            if record["source_path"] not in archive_names
+        ]
+        if missing_sources:
+            preview = ", ".join(missing_sources[:5])
+            raise RuntimeError(
+                f"{len(missing_sources)} official split paths were not found in data.zip. "
+                f"Examples: {preview}"
+            )
+
+        for record in records:
+            class_name = record["class_name"]
+            source_split = record["source_split"]
+            source_path = record["source_path"]
 
             class_dir = args.output_dir / class_name
             class_dir.mkdir(parents=True, exist_ok=True)
-            index = counters[class_name]
-            output_path = class_dir / f"plantvillage_{index:05d}.jpg"
 
-            image = example["image"].convert("RGB")
-            image.save(output_path, format="JPEG", quality=95)
-            counters[class_name] += 1
+            index = counters[(class_name, source_split)]
+            output_name = f"plantvillage_{source_split}_{index:05d}.jpg"
+            output_path = class_dir / output_name
 
-            manifest_rows.append(
+            with archive.open(source_path) as source:
+                image_bytes = source.read()
+            with Image.open(io.BytesIO(image_bytes)) as image:
+                image.convert("RGB").save(output_path, format="JPEG", quality=95)
+
+            relative_output = output_path.relative_to(args.output_dir).as_posix()
+            manifest_records.append(
                 {
-                    "path": str(output_path.relative_to(args.output_dir)),
+                    "path": relative_output,
                     "class_name": class_name,
-                    "source_split": split_name,
-                    "leaf_id": str(example.get("leaf_id", "")),
+                    "source_split": source_split,
+                    "source_path": source_path,
                 }
             )
+            counters[(class_name, source_split)] += 1
+            class_totals[class_name] += 1
+            split_totals[source_split] += 1
 
-    missing = [name for name in selected_names if counters[name] == 0]
-    if missing:
-        raise RuntimeError(f"No images exported for selected classes: {missing}")
-
-    manifest_path = args.output_dir / "plantvillage_manifest.csv"
-    with manifest_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(
-            handle,
-            fieldnames=["path", "class_name", "source_split", "leaf_id"],
-        )
-        writer.writeheader()
-        writer.writerows(manifest_rows)
+    manifest = {
+        "dataset": DATASET_ID,
+        "variant": "color",
+        "profile": profile["id"],
+        "official_split_preserved": True,
+        "classes": selected_names,
+        "counts": {
+            "train": split_totals["train"],
+            "test": split_totals["test"],
+            "total": len(manifest_records),
+        },
+        "records": manifest_records,
+    }
+    manifest_path = args.output_dir / MANIFEST_NAME
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     print("\nPrepared dataset:")
     for name in selected_names:
-        print(f"  {name}: {counters[name]} images")
-    print(f"\nOutput: {args.output_dir.resolve()}")
+        train_count = counters[(name, "train")]
+        test_count = counters[(name, "test")]
+        print(
+            f"  {name}: train={train_count}, test={test_count}, "
+            f"total={class_totals[name]}"
+        )
+
+    print(
+        f"\nTotals: train={split_totals['train']}, test={split_totals['test']}, "
+        f"total={len(manifest_records)}"
+    )
+    print(f"Output: {args.output_dir.resolve()}")
     print(f"Manifest: {manifest_path.resolve()}")
     print(
         "PlantVillage is a bootstrap dataset. Before public release, validate the "
