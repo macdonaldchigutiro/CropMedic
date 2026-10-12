@@ -25,6 +25,7 @@ class CropConfirmationScreen extends StatefulWidget {
 
 class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   String? _selectedCrop;
+  List<CropOption> _diagnosisCrops = supportedCrops;
 
   String ui(String en, String sn, String nd, String toi) {
     switch (widget.lang) {
@@ -41,9 +42,31 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
     if (widget.guess.accepted && widget.guess.crop.isNotEmpty) {
       _selectedCrop = widget.guess.crop;
     }
+    _loadCapabilities();
+  }
+
+  Future<void> _loadCapabilities() async {
+    try {
+      final capabilities = await fetchCapabilities();
+      final options = <CropOption>[];
+      for (final id in capabilities.diagnosisSupportedCrops) {
+        final crop = cropById(id);
+        if (crop != null && !options.any((item) => item.id == crop.id)) {
+          options.add(crop);
+        }
+      }
+      if (!mounted || options.isEmpty) return;
+      setState(() => _diagnosisCrops = options);
+    } catch (_) {
+      // Keep the built-in four-crop fallback if the capabilities endpoint is
+      // temporarily unavailable. Diagnosis requests still enforce backend rules.
+    }
   }
 
   void _showRoadmap() {
+    final activeIds = _diagnosisCrops.map((crop) => crop.id).toSet();
+    final futureCrops = allCrops.where((crop) => !activeIds.contains(crop.id)).toList();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -99,7 +122,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: roadmapCrops
+              children: futureCrops
                   .map((crop) => Chip(label: Text('${crop.emoji} ${crop.label(widget.lang)}')))
                   .toList(),
             ),
@@ -230,7 +253,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                     childAspectRatio: 2.25,
-                    children: supportedCrops.map((crop) {
+                    children: _diagnosisCrops.map((crop) {
                       final selected = _selectedCrop == crop.id;
                       return InkWell(
                         onTap: () => setState(() => _selectedCrop = crop.id),
@@ -300,10 +323,10 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                   const SizedBox(height: 12),
                   Text(
                     ui(
-                      'Automatic crop identification is currently a bootstrap feature for the four supported crops. Farmer confirmation is required.',
-                      'Kuziva chirimwa otomatiki kuchiri kwekutanga pazvirimwa zvina zvinotsigirwa. Murimi anofanira kusimbisa.',
-                      'Ukubona isilimo ngokuzenzakalela kuseyisigaba sokuqala ezilimweni ezine. Umlimi kumele aqinisekise.',
-                      'Kuziba mulimo kuli mukutalika kumilimo yone. Mulimi ulasinizya.',
+                      'Automatic crop identification and disease diagnosis are separate. A crop may be available for diagnosis while still requiring you to select it manually.',
+                      'Kuziva chirimwa otomatiki nekuongorora chirwere zvinhu zvakasiyana. Chirimwa chinogona kutsigirwa pakuongorora asi uchifanira kuchisarudza nemaoko.',
+                      'Ukubona isilimo ngokuzenzakalela lokuhlola isifo kwehlukene. Isilimo singasekelwa ekuhlolweni kodwa kudingeke usikhethe wena.',
+                      'Kuziba mulimo otomatiki akuyandula bulwazi zilapalana. Mulimo inga walagwasigwa mukuyandulwa pele ulasala lwako.',
                     ),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Palette.textDim, fontSize: 11.5, height: 1.35),
