@@ -72,7 +72,7 @@ const supportedCrops = <CropOption>[
 
 const roadmapCrops = <CropOption>[
   CropOption(id: 'Soybean', emoji: '🌱', aiSupported: false, en: 'Soybean', sn: 'Soya bean', nd: 'Soybean', toi: 'Soybean'),
-  CropOption(id: 'Beans', emoji: '🫘', aiSupported: false, en: 'Beans', sn: 'Bhinzi', nd: 'Indumba', toi: 'Beans'),
+  CropOption(id: 'Common bean', emoji: '🫘', aiSupported: false, en: 'Common bean', sn: 'Bhinzi', nd: 'Indumba', toi: 'Common bean'),
   CropOption(id: 'Peas', emoji: '🫛', aiSupported: false, en: 'Peas', sn: 'Pizi', nd: 'Peas', toi: 'Peas'),
   CropOption(id: 'Tobacco', emoji: '🍃', aiSupported: false, en: 'Tobacco', sn: 'Fodya', nd: 'Gwayi', toi: 'Tobacco'),
   CropOption(id: 'Wheat', emoji: '🌾', aiSupported: false, en: 'Wheat', sn: 'Gorosi', nd: 'Ingqoloyi', toi: 'Wheat'),
@@ -93,8 +93,10 @@ const roadmapCrops = <CropOption>[
   CropOption(id: 'Cotton', emoji: '☁️', aiSupported: false, en: 'Cotton', sn: 'Donje', nd: 'Ikhothoni', toi: 'Cotton'),
 ];
 
+List<CropOption> get allCrops => [...supportedCrops, ...roadmapCrops];
+
 CropOption? cropById(String id) {
-  for (final crop in [...supportedCrops, ...roadmapCrops]) {
+  for (final crop in allCrops) {
     if (crop.id == id) return crop;
   }
   return null;
