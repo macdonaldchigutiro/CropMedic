@@ -24,7 +24,7 @@ ADVICE = json.loads((BASE / "advice.json").read_text(encoding="utf-8"))
 IMG_SIZE = 224
 LOW_CONFIDENCE = 0.70
 MIN_PREDICTION_MARGIN = 0.15
-CROP_MIN_RAW_SCORE = 0.35
+CROP_MIN_RAW_SCORE = 0.60
 CROP_MIN_MARGIN = 0.10
 TOP_K = 3
 SUPPORTED_LANGS = {"en", "sn", "nd", "toi"}
