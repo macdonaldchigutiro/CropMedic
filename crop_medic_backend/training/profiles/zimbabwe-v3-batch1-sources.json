@@ -54,14 +54,26 @@
       "display_name": "Common bean",
       "status": "approved_for_pilot_training",
       "primary_source": {
+        "name": "High-Resolution Dataset of Common Bean Leaf Diseases in Bangladesh",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/89c9r5m2gx.1",
+        "url": "https://data.mendeley.com/datasets/89c9r5m2gx/1",
+        "license": "CC BY 4.0",
+        "capture": "natural-daylight mobile-phone images of common bean leaves collected from fields",
+        "image_count": 3180,
+        "classes": ["Healthy", "Angular Leaf Spot", "Anthracnose", "Mosaic Virus", "Rust"],
+        "role": "pilot_training",
+        "notes": "Images use a clean A4 background, so keep truly in-field smartphone images for external validation."
+      },
+      "deprecated_source": {
         "name": "Makerere AI Lab / NaCRRI Beans dataset",
-        "repository": "TensorFlow Datasets / GitHub",
+        "repository": "TensorFlow Datasets / Google Cloud Storage",
         "url": "https://www.tensorflow.org/datasets/catalog/beans",
         "license": "CC BY 4.0",
-        "capture": "Ugandan field smartphone images",
         "image_count": 1295,
         "classes": ["Healthy", "Angular Leaf Spot", "Bean Rust"],
-        "role": "pilot_training"
+        "status": "download_host_returns_http_403",
+        "notes": "Good Ugandan field smartphone dataset, but the published TFDS storage.googleapis.com/ibeans URLs currently return HTTP 403 and must not block Batch 1."
       },
       "external_validation_source": {
         "name": "A Labeled Dataset of Healthy and Diseased Common Beans from Tanzania",
