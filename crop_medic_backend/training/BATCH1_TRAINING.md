@@ -12,7 +12,9 @@ A crop stays **Coming soon** until all of these are true:
 4. internal held-out metrics are acceptable;
 5. a separate external/field dataset is tested without being used for tuning;
 6. rejection/uncertainty behaviour is checked;
-7. Zimbabwe-style field photos are tested before public release.
+7. Zimbabwe-style field photos are tested before public release;
+8. disease guidance/translations are reviewed;
+9. the model is explicitly promoted into the guarded backend registry.
 
 Do not mix external validation images into training before the baseline is frozen.
 
@@ -61,6 +63,18 @@ python audit_crop_dataset.py --data-dir data_batch1/common_bean --crop-id common
 
 The old `prepare_common_bean_tfds.py` command remains only as a compatibility entry point and now delegates to the BLD-BD preparer when `--zip-path` is supplied.
 
+## Soybean, wheat and sorghum archive preparation
+
+`prepare_batch1_archive.py` stages only labels it can map unambiguously. If archive labels do not match the vetted classes, it stops and prints sample paths rather than guessing.
+
+```powershell
+python prepare_batch1_archive.py --crop-id soybean --zip-path "C:\path\to\soybean.zip"
+python prepare_batch1_archive.py --crop-id wheat --zip-path "C:\path\to\wheat.zip"
+python prepare_batch1_archive.py --crop-id sorghum --zip-path "C:\path\to\sorghum.zip"
+```
+
+If it reports unmapped images, review the archive structure before changing aliases. Never train from uncertain labels.
+
 ## Local folder layout
 
 Do not commit datasets to Git.
@@ -100,20 +114,39 @@ python audit_crop_dataset.py --data-dir data_batch1/sorghum --crop-id sorghum
 
 Fix corrupt files, cross-label duplicates and suspicious class imbalance before training.
 
-## Step 2 — train a pilot crop-specific model
+## Step 2 — resumable pilot training
 
-GPU/Colab is recommended.
+`train_crop_model.py` now supports persistent phase checkpoints. On Colab, place both the output and checkpoint directories in Google Drive so a runtime disconnect does not force a full restart.
 
 ```bash
 python train_crop_model.py \
   --crop-id common_bean \
   --data-dir data_batch1/common_bean \
-  --output-dir artifacts_batch1/common_bean
+  --output-dir /content/drive/MyDrive/CropMedic/batch1/common_bean \
+  --checkpoint-dir /content/drive/MyDrive/CropMedic/checkpoints/common_bean
 ```
 
-Repeat for soybean, wheat and sorghum. Artifacts include `model.keras`, `model.tflite`, `class_names.json`, `metrics.json`, training logs and metadata.
+The Common Bean notebook `CropMedic_Batch1_CommonBean_Colab.ipynb` mounts Drive before training, stores the dataset ZIP there after the first upload, and resumes interrupted training from Drive checkpoints.
 
-## Step 3 — build the crop identifier
+Artifacts include `model.keras`, `model.tflite`, `class_names.json`, `metrics.json`, training logs and metadata.
+
+## Step 3 — external validation and rejection testing
+
+After a baseline is frozen, evaluate it on a source that was **not** used for training. Unsupported diseases/non-crop images should go in a separate challenge directory rather than being mislabeled as a known class.
+
+```bash
+python evaluate_external_dataset.py \
+  --crop-id common_bean \
+  --model-dir /content/drive/MyDrive/CropMedic/batch1/common_bean \
+  --data-dir external_common_bean/known \
+  --unknown-dir external_common_bean/unknown
+```
+
+The report includes accuracy, macro F1 for classes actually present, per-class precision/recall/F1, confusion matrix, known-image rejection and unknown-challenge rejection.
+
+Do **not** tune on the external validation set. CropMedic should prefer **uncertain / unsupported** over a confident wrong diagnosis.
+
+## Step 4 — build the crop identifier
 
 Create a separate folder where the *class is the crop*, not the disease:
 
@@ -138,23 +171,32 @@ The same generic trainer can train the first identifier:
 python train_crop_model.py \
   --crop-id crop_identifier_v1 \
   --data-dir crop_identifier_data \
-  --output-dir artifacts_batch1/crop_identifier_v1
+  --output-dir artifacts_batch1/crop_identifier_v1 \
+  --checkpoint-dir checkpoints/crop_identifier_v1
 ```
 
-## Step 4 — external validation
+Crop identification remains a farmer-confirmed bootstrap flow until this dedicated identifier has its own external validation.
 
-After a baseline is frozen, evaluate it on a source that was not used for training. Report at least accuracy, macro F1, per-class precision/recall, confusion matrix, rejection rate, and top-2 confusion patterns.
+## Step 5 — guarded backend promotion
 
-CropMedic should prefer **uncertain / unsupported** over a confident wrong diagnosis.
+The backend now supports optional crop-specific models under `backend/models/<crop>/`, controlled by `backend/models/registry.json`. Registry entries default to disabled.
 
-## Step 5 — promote only when ready
+Use `promote_crop_model.py` only after external validation, rejection testing, field review and guidance/translation review are complete. The promotion script validates required artifacts and thresholds before enabling the registry entry.
 
-Promotion means:
+```powershell
+python promote_crop_model.py `
+  --crop "Common bean" `
+  --artifact-dir "C:\path\to\common_bean_artifacts" `
+  --validation-report "C:\path\to\external_validation.json" `
+  --confirm-field-review `
+  --confirm-guidance-reviewed
+```
 
-- copy the validated model into the backend model registry;
-- add the crop to `AI-supported crops` in the Flutter catalog;
-- add reviewed disease guidance and translations;
-- add crop-specific confidence/rejection thresholds;
+After promotion:
+
+- restart the backend;
+- verify `/api/health` and `/api/capabilities`;
+- update the Flutter catalog only when the backend reports the crop ready;
 - preserve the previous model for rollback.
 
 Public datasets remain bootstrap sources. Public release claims require real field-photo validation, preferably including Zimbabwean crops, varieties, lighting, phones and disease stages.
