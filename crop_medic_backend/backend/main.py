@@ -1,11 +1,18 @@
 import io
 import json
+import os
+import warnings
+from collections import defaultdict, deque
 from pathlib import Path
+from threading import Lock
+from time import monotonic
 
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
@@ -18,16 +25,108 @@ IMG_SIZE = 224
 LOW_CONFIDENCE = 0.70
 MIN_PREDICTION_MARGIN = 0.15
 TOP_K = 3
+SUPPORTED_LANGS = {"en", "sn", "nd", "toi"}
+ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
 
-app = FastAPI(title="Crop Medic API")
+APP_ENV = os.getenv("CROPMEDIC_ENV", "development").strip().lower()
+IS_PRODUCTION = APP_ENV == "production"
+MAX_IMAGE_BYTES = int(os.getenv("CROPMEDIC_MAX_IMAGE_BYTES", str(8 * 1024 * 1024)))
+MAX_IMAGE_PIXELS = int(os.getenv("CROPMEDIC_MAX_IMAGE_PIXELS", str(20_000_000)))
+RATE_LIMIT_REQUESTS = int(os.getenv("CROPMEDIC_RATE_LIMIT_REQUESTS", "30"))
+RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("CROPMEDIC_RATE_LIMIT_WINDOW_SECONDS", "60"))
+TRUST_PROXY = os.getenv("CROPMEDIC_TRUST_PROXY", "false").lower() == "true"
+FORCE_HTTPS = os.getenv("CROPMEDIC_FORCE_HTTPS", "true").lower() == "true"
 
-# Development-only CORS policy. Restrict this to trusted origins before deployment.
+DEFAULT_CORS = (
+    "http://localhost:3000,http://127.0.0.1:3000,"
+    "http://localhost:8080,http://127.0.0.1:8080,"
+    "http://localhost:5000,http://127.0.0.1:5000"
+)
+CORS_ORIGINS = [
+    item.strip()
+    for item in os.getenv("CROPMEDIC_CORS_ORIGINS", DEFAULT_CORS).split(",")
+    if item.strip()
+]
+TRUSTED_HOSTS = [
+    item.strip()
+    for item in os.getenv("CROPMEDIC_TRUSTED_HOSTS", "localhost,127.0.0.1").split(",")
+    if item.strip()
+]
+
+# Pillow can otherwise only warn about decompression-bomb-sized images.
+Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
+
+app = FastAPI(
+    title="Crop Medic API",
+    docs_url=None if IS_PRODUCTION else "/docs",
+    redoc_url=None if IS_PRODUCTION else "/redoc",
+    openapi_url=None if IS_PRODUCTION else "/openapi.json",
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+    allow_credentials=False,
 )
+
+if TRUSTED_HOSTS:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=TRUSTED_HOSTS)
+
+if IS_PRODUCTION and FORCE_HTTPS:
+    app.add_middleware(HTTPSRedirectMiddleware)
+
+_rate_buckets = defaultdict(deque)
+_rate_lock = Lock()
+
+
+def _client_key(request: Request) -> str:
+    if TRUST_PROXY:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            return forwarded.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_exceeded(request: Request) -> tuple[bool, int]:
+    now = monotonic()
+    cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+    key = _client_key(request)
+
+    with _rate_lock:
+        bucket = _rate_buckets[key]
+        while bucket and bucket[0] <= cutoff:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_REQUESTS:
+            retry_after = max(1, int(RATE_LIMIT_WINDOW_SECONDS - (now - bucket[0])))
+            return True, retry_after
+        bucket.append(now)
+    return False, 0
+
+
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    if request.method == "POST" and request.url.path == "/api/predict":
+        exceeded, retry_after = _rate_limit_exceeded(request)
+        if exceeded:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many diagnosis requests. Please try again shortly."},
+                headers={"Retry-After": str(retry_after)},
+            )
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=()"
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
+    if IS_PRODUCTION:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 
 model = None
 class_names = []
@@ -78,7 +177,6 @@ load_model()
 
 
 def split_label(raw: str):
-    # PlantVillage format: "Crop___Disease_name"
     crop, separator, disease = raw.partition("___")
     if not separator:
         return crop.replace("_", " ").strip(), "Unknown"
@@ -104,29 +202,71 @@ def ensure_model_ready():
         )
 
 
+def _decode_and_validate_image(image_bytes: bytes) -> Image.Image:
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="The uploaded image is empty.")
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Image is too large. Maximum upload size is {MAX_IMAGE_BYTES // (1024 * 1024)} MB.",
+        )
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            probe = Image.open(io.BytesIO(image_bytes))
+            image_format = (probe.format or "").upper()
+            width, height = probe.size
+
+            if image_format not in ALLOWED_IMAGE_FORMATS:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Unsupported image format. Use JPEG, PNG or WebP.",
+                )
+            if width < 64 or height < 64:
+                raise HTTPException(status_code=400, detail="Image is too small to analyse reliably.")
+            if width * height > MAX_IMAGE_PIXELS:
+                raise HTTPException(status_code=413, detail="Image dimensions are too large.")
+            if getattr(probe, "is_animated", False):
+                raise HTTPException(status_code=400, detail="Animated images are not supported.")
+
+            probe.verify()
+            return Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    except HTTPException:
+        raise
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        raise HTTPException(status_code=413, detail="Image dimensions are too large.") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Couldn't read that image.") from exc
+
+
 @app.get("/api/health")
 def health():
     ready = model is not None and bool(class_names)
-    return {
+    payload = {
         "status": "ready" if ready else "unavailable",
         "model_loaded": ready,
         "class_count": len(class_names),
-        "model_error": model_error,
     }
+    if not IS_PRODUCTION:
+        payload["model_error"] = model_error
+    return payload
 
 
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...), lang: str = "en"):
     ensure_model_ready()
 
-    if not file.content_type or not file.content_type.startswith("image/"):
+    if not file.content_type or not file.content_type.lower().startswith("image/"):
         raise HTTPException(status_code=400, detail="Upload an image file.")
 
-    try:
-        image_bytes = await file.read()
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail="Couldn't read that image.") from exc
+    lang = lang.lower().strip()
+    if lang not in SUPPORTED_LANGS:
+        lang = "en"
+
+    image_bytes = await file.read(MAX_IMAGE_BYTES + 1)
+    await file.close()
+    img = _decode_and_validate_image(image_bytes)
 
     img = img.resize((IMG_SIZE, IMG_SIZE))
     arr = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
@@ -163,8 +303,6 @@ async def predict(file: UploadFile = File(...), lang: str = "en"):
     second_confidence = float(probs[int(top_indices[1])]) if len(top_indices) > 1 else 0.0
     prediction_margin = confidence - second_confidence
 
-    # A closed-set disease classifier always has a "best" class, even for a face,
-    # a car, or an unrelated plant. Do not turn a weak/ambiguous score into a diagnosis.
     accepted = confidence >= LOW_CONFIDENCE and prediction_margin >= MIN_PREDICTION_MARGIN
     if not accepted:
         return {
