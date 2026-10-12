@@ -47,13 +47,13 @@ CORS_ORIGINS = [
     for item in os.getenv("CROPMEDIC_CORS_ORIGINS", DEFAULT_CORS).split(",")
     if item.strip()
 ]
+LOCAL_DEV_ORIGIN_REGEX = None if IS_PRODUCTION else r"^http://(localhost|127\.0\.0\.1)(:\d+)?$"
 TRUSTED_HOSTS = [
     item.strip()
     for item in os.getenv("CROPMEDIC_TRUSTED_HOSTS", "localhost,127.0.0.1").split(",")
     if item.strip()
 ]
 
-# Pillow can otherwise only warn about decompression-bomb-sized images.
 Image.MAX_IMAGE_PIXELS = MAX_IMAGE_PIXELS
 
 app = FastAPI(
@@ -66,6 +66,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=LOCAL_DEV_ORIGIN_REGEX,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
     allow_credentials=False,
