@@ -32,7 +32,9 @@ Write-Host "Building Flutter web release..." -ForegroundColor Cyan
 Push-Location $FlutterDir
 try {
     flutter pub get
-    flutter build web --release --dart-define=CROP_MEDIC_API_URL=$ApiUrl
+    # The backend serves Flutter assets from /static while / returns index.html.
+    # Build with a /static/ base href so CSS/JS/assets resolve correctly.
+    flutter build web --release --base-href /static/ --dart-define=CROP_MEDIC_API_URL=$ApiUrl
 }
 finally {
     Pop-Location
