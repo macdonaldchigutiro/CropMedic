@@ -1,20 +1,26 @@
 """Compatibility entry point for Common Bean Batch-1 preparation.
 
-The original TensorFlow Datasets Beans download now returns HTTP 403 from
-https://storage.googleapis.com/ibeans/*.zip. CropMedic therefore uses the
-current CC BY 4.0 Mendeley common-bean field dataset instead.
+The original TensorFlow Datasets Beans host now returns HTTP 403, and the
+previous high-resolution Mendeley fallback expands to about 8.6 GiB, which is
+unnecessarily heavy for the first pilot on a local Windows machine.
 
-You can keep using the old command:
-    python prepare_common_bean_tfds.py
+CropMedic now uses the lightweight BLD-BD original field dataset for the pilot.
+Download only:
+    Original_Bean_Leaf_Disease_Dataset.zip
+from:
+    https://data.mendeley.com/datasets/3k46s46x3s/1
 
-It now delegates to prepare_common_bean_mendeley.py.
+Then run either:
+    python prepare_common_bean_bldbd.py --zip-path "C:\\path\\to\\Original_Bean_Leaf_Disease_Dataset.zip"
+
+or this compatibility command with the same --zip-path argument.
 """
-from prepare_common_bean_mendeley import main
+from prepare_common_bean_bldbd import main
 
 
 if __name__ == "__main__":
     print(
-        "The old TFDS Beans host is unavailable (HTTP 403). "
-        "Using the Mendeley Common Bean fallback instead."
+        "Using the lightweight BLD-BD Common Bean pilot dataset. "
+        "Pass --zip-path pointing to Original_Bean_Leaf_Disease_Dataset.zip."
     )
     main()
