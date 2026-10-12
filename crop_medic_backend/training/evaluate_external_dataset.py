@@ -120,6 +120,7 @@ def main():
         raise SystemExit("Model output count does not match class_names.json.")
 
     known_paths, known_labels, present_classes = load_known(args.data_dir, class_names)
+    missing_classes = [name for name in class_names if name not in present_classes]
     known_ds = make_dataset(known_paths, known_labels, args.batch_size, False, 42)
     known_probs = np.asarray(model.predict(known_ds, verbose=1), dtype=np.float32)
     known_pred = np.argmax(known_probs, axis=1)
@@ -174,7 +175,10 @@ def main():
         "evaluation_type": "external_validation_no_tuning",
         "model_dir": str(args.model_dir.resolve()),
         "external_data_dir": str(args.data_dir.resolve()),
+        "model_classes": class_names,
         "classes_present": present_classes,
+        "missing_model_classes": missing_classes,
+        "all_model_classes_present": not missing_classes,
         "images": len(known_paths),
         "accuracy": round(external_accuracy, 6),
         "macro_f1_present_classes": round(float(np.mean(present_f1)), 6),
@@ -198,6 +202,9 @@ def main():
     output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     print(f"External images: {payload['images']}")
+    print(f"Classes present: {len(present_classes)}/{len(class_names)}")
+    if missing_classes:
+        print("WARNING: Missing model classes from external validation: " + ", ".join(missing_classes))
     print(f"Accuracy: {payload['accuracy']:.4f}")
     print(f"Macro F1 (present classes): {payload['macro_f1_present_classes']:.4f}")
     print(f"Known rejection rate: {known_rejection['rejection_rate']:.4f}")
