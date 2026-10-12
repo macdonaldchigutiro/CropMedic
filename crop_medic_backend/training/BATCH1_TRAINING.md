@@ -21,31 +21,26 @@ Do not mix external validation images into training before the baseline is froze
 The machine-readable registry is `profiles/zimbabwe-v3-batch1-sources.json`.
 
 - **Soybean** — Mendeley `10.17632/6fhphxg297.2`, CC BY 4.0, five field-image classes. Auburn ASDID is reserved for external validation initially.
-- **Common bean** — Mendeley `10.17632/89c9r5m2gx.1`, CC BY 4.0, 3,180 mobile-phone images covering Healthy, Angular Leaf Spot, Anthracnose, Mosaic Virus and Rust. The older Makerere/NaCRRI TFDS dataset is still valuable, but its published Google Cloud download currently returns HTTP 403, so it no longer blocks Batch 1. Tanzania Zenodo `10.5281/zenodo.15685315` remains reserved for external validation/expansion.
-- **Wheat** — Mendeley `10.17632/wgd66f8n6h.1`, CC BY 4.0, real Ethiopian wheat-field images with Healthy, Stripe Rust and Septoria. A larger Bangladesh source can expand disease coverage later.
+- **Common bean pilot** — BLD-BD Mendeley `10.17632/3k46s46x3s.1`, CC BY 4.0, 672 original field-derived images covering Healthy, Angular Leaf Spot and Bean Common Mosaic Virus. Use `Original_Bean_Leaf_Disease_Dataset.zip` only for the first baseline.
+- **Common bean later expansion** — Mendeley `10.17632/89c9r5m2gx.1`, CC BY 4.0, 3,180 high-resolution images and five classes. The browser download contains a nested archive that expands to roughly 8.6 GiB, so prepare it later in cloud storage or on a machine with sufficient free disk rather than blocking the first pilot.
+- **Wheat** — Mendeley `10.17632/wgd66f8n6h.1`, CC BY 4.0, real Ethiopian wheat-field images with Healthy, Stripe Rust and Septoria.
 - **Sorghum** — Mendeley `10.17632/fgb3cmfrg2.1`, CC BY 4.0. It contains leaf and head/grain diseases, so CropMedic must support affected-part photos rather than a leaf-only assumption.
-- **Tobacco** — disease dataset is not approved yet. The public Kaggle source referenced by the MD-Unet paper still needs licence/class review before ingestion. Keep tobacco disabled for disease diagnosis until this is resolved.
+- **Tobacco** — disease dataset is not approved yet. Keep tobacco disabled for disease diagnosis until the candidate source licence and class definitions are verified.
 
 ## Common bean preparation
 
-Preferred command:
+For the first pilot, download only this file from the BLD-BD dataset page:
 
-```powershell
-python prepare_common_bean_mendeley.py
+```text
+Original_Bean_Leaf_Disease_Dataset.zip
 ```
 
-For compatibility, this also works:
+Do **not** use the augmented ZIP for the baseline because derived versions of the same image can leak across train/validation/test splits.
+
+Prepare it with:
 
 ```powershell
-python prepare_common_bean_tfds.py
-```
-
-The compatibility command now delegates to the Mendeley preparer instead of the broken TFDS download host.
-
-If the Mendeley API refuses an automated download, open the dataset page in a browser, download the ZIP, then run:
-
-```powershell
-python prepare_common_bean_mendeley.py --zip-path "C:\path\to\downloaded.zip"
+python prepare_common_bean_bldbd.py --zip-path "C:\path\to\Original_Bean_Leaf_Disease_Dataset.zip"
 ```
 
 Expected output layout:
@@ -55,10 +50,16 @@ data_batch1/
   common_bean/
     Healthy/
     Angular Leaf Spot/
-    Anthracnose/
-    Mosaic Virus/
-    Rust/
+    Bean Common Mosaic Virus/
 ```
+
+Then audit:
+
+```powershell
+python audit_crop_dataset.py --data-dir data_batch1/common_bean --crop-id common_bean
+```
+
+The old `prepare_common_bean_tfds.py` command remains only as a compatibility entry point and now delegates to the BLD-BD preparer when `--zip-path` is supplied.
 
 ## Local folder layout
 
@@ -75,9 +76,7 @@ data_batch1/
   common_bean/
     Healthy/
     Angular Leaf Spot/
-    Anthracnose/
-    Mosaic Virus/
-    Rust/
+    Bean Common Mosaic Virus/
   wheat/
     Healthy/
     Stripe Rust/
@@ -107,12 +106,12 @@ GPU/Colab is recommended.
 
 ```bash
 python train_crop_model.py \
-  --crop-id soybean \
-  --data-dir data_batch1/soybean \
-  --output-dir artifacts_batch1/soybean
+  --crop-id common_bean \
+  --data-dir data_batch1/common_bean \
+  --output-dir artifacts_batch1/common_bean
 ```
 
-Repeat for common bean, wheat and sorghum. Artifacts include `model.keras`, `model.tflite`, `class_names.json`, `metrics.json`, training logs and metadata.
+Repeat for soybean, wheat and sorghum. Artifacts include `model.keras`, `model.tflite`, `class_names.json`, `metrics.json`, training logs and metadata.
 
 ## Step 3 — build the crop identifier
 
@@ -142,8 +141,6 @@ python train_crop_model.py \
   --output-dir artifacts_batch1/crop_identifier_v1
 ```
 
-For the identifier, `class_names.json` will contain crop names instead of diseases.
-
 ## Step 4 — external validation
 
 After a baseline is frozen, evaluate it on a source that was not used for training. Report at least accuracy, macro F1, per-class precision/recall, confusion matrix, rejection rate, and top-2 confusion patterns.
@@ -160,4 +157,4 @@ Promotion means:
 - add crop-specific confidence/rejection thresholds;
 - preserve the previous model for rollback.
 
-PlantVillage and other public datasets remain bootstrap sources. Public release claims require real field-photo validation, preferably including Zimbabwean crops, varieties, lighting, phones and disease stages.
+Public datasets remain bootstrap sources. Public release claims require real field-photo validation, preferably including Zimbabwean crops, varieties, lighting, phones and disease stages.
