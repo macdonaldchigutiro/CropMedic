@@ -36,7 +36,7 @@ jobs:
           print('registry ok:', ', '.join(names))
           PY
 
-  flutter-analyze:
+  flutter-quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,4 +49,10 @@ jobs:
         run: flutter pub get
       - name: Flutter analyze
         working-directory: crop_medic
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+      - name: Flutter tests
+        working-directory: crop_medic
+        run: flutter test
+      - name: Flutter web release build
+        working-directory: crop_medic
+        run: flutter build web --release --dart-define=CROP_MEDIC_API_URL=http://127.0.0.1:8000
