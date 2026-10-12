@@ -1,0 +1,152 @@
+{
+  "id": "zimbabwe-v3-batch1-sources",
+  "country": "Zimbabwe",
+  "goal": "Prepare the first expansion wave for CropMedic crop identification and crop-specific disease models.",
+  "policy": {
+    "never_mark_supported_before_external_validation": true,
+    "keep_external_validation_sources_out_of_training": true,
+    "prefer_field_or_smartphone_images": true,
+    "require_license_review_before_ingestion": true
+  },
+  "crops": [
+    {
+      "crop_id": "soybean",
+      "display_name": "Soybean",
+      "status": "approved_for_pilot_training",
+      "primary_source": {
+        "name": "Multi-Class Soybean Leaf Disease Dataset: Healthy and Diseased Leaf Images for Machine Learning",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/6fhphxg297.2",
+        "url": "https://data.mendeley.com/datasets/6fhphxg297/2",
+        "license": "CC BY 4.0",
+        "capture": "real-time field images under natural conditions",
+        "classes": [
+          "Healthy",
+          "Bacterial Blight",
+          "Cercospora Leaf Blight",
+          "Sudden Death Syndrome",
+          "Soybean Rust"
+        ],
+        "role": "pilot_training"
+      },
+      "external_validation_source": {
+        "name": "Auburn Soybean Disease Image Dataset (ASDID)",
+        "repository": "Dryad / Zenodo mirror",
+        "doi": "10.5061/dryad.41ns1rnj3",
+        "url": "https://datadryad.org/dataset/doi:10.5061/dryad.41ns1rnj3",
+        "capture": "field and controlled-background DSLR/smartphone images",
+        "classes": [
+          "Healthy",
+          "Bacterial Blight",
+          "Cercospora Leaf Blight",
+          "Downy Mildew",
+          "Frogeye Leaf Spot",
+          "Soybean Rust",
+          "Target Spot",
+          "Potassium Deficiency"
+        ],
+        "role": "external_validation_only_until_baseline_is_frozen",
+        "notes": "Large dataset; do not mix into the pilot training set before external evaluation."
+      }
+    },
+    {
+      "crop_id": "common_bean",
+      "display_name": "Common bean",
+      "status": "approved_for_pilot_training",
+      "primary_source": {
+        "name": "Makerere AI Lab / NaCRRI Beans dataset",
+        "repository": "TensorFlow Datasets / GitHub",
+        "url": "https://www.tensorflow.org/datasets/catalog/beans",
+        "license": "CC BY 4.0",
+        "capture": "Ugandan field smartphone images",
+        "image_count": 1295,
+        "classes": ["Healthy", "Angular Leaf Spot", "Bean Rust"],
+        "role": "pilot_training"
+      },
+      "external_validation_source": {
+        "name": "A Labeled Dataset of Healthy and Diseased Common Beans from Tanzania",
+        "repository": "Zenodo",
+        "doi": "10.5281/zenodo.15685315",
+        "url": "https://zenodo.org/records/15685315",
+        "license": "CC BY 4.0",
+        "capture": "multi-season smartphone field images reviewed by extension officers and plant pathologists",
+        "image_count": 155842,
+        "classes": ["Healthy", "Bean Rust", "Bean Anthracnose"],
+        "role": "external_validation_and_later_expansion",
+        "notes": "Very large dataset. Reserve a geographically separate holdout before any later training use."
+      }
+    },
+    {
+      "crop_id": "wheat",
+      "display_name": "Wheat",
+      "status": "approved_for_pilot_training",
+      "primary_source": {
+        "name": "Wheat Leaf Dataset",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/wgd66f8n6h.1",
+        "url": "https://data.mendeley.com/datasets/wgd66f8n6h/1",
+        "license": "CC BY 4.0",
+        "capture": "real wheat farm in Ethiopia, uncontrolled environment, pathologist-sorted",
+        "image_count": 407,
+        "classes": ["Healthy", "Stripe Rust", "Septoria"],
+        "role": "pilot_training"
+      },
+      "secondary_source": {
+        "name": "Disease Dataset of Wheat: Original, Augmented, and Balanced for Deep Learning",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/5gc7hwydwg.1",
+        "url": "https://data.mendeley.com/datasets/5gc7hwydwg/1",
+        "license": "CC BY 4.0",
+        "capture": "Bangladesh field images",
+        "original_image_count": 1603,
+        "classes": ["Black Point", "Fusarium Foot Rot", "Healthy", "Leaf Blight", "Wheat Blast"],
+        "role": "later_disease_expansion",
+        "notes": "Use original images only for evaluation/training splits; do not place augmented derivatives across train and test."
+      }
+    },
+    {
+      "crop_id": "sorghum",
+      "display_name": "Sorghum",
+      "status": "approved_for_pilot_training_after_dataset_structure_review",
+      "primary_source": {
+        "name": "Sorghum Disease Image Dataset",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/fgb3cmfrg2.1",
+        "url": "https://data.mendeley.com/datasets/fgb3cmfrg2/1",
+        "license": "CC BY 4.0",
+        "image_count": 7167,
+        "classes": [
+          "Anthracnose and Red Rot",
+          "Cereal Grain Molds",
+          "Covered Kernel Smut",
+          "Head Smut",
+          "Loose Smut",
+          "Rust"
+        ],
+        "role": "pilot_training_candidate",
+        "notes": "Several classes affect heads/grain rather than only leaves. CropMedic should prompt for the affected plant part, not force a leaf-only workflow."
+      }
+    },
+    {
+      "crop_id": "tobacco",
+      "display_name": "Tobacco",
+      "status": "blocked_pending_license_and_dataset_audit",
+      "candidate_source": {
+        "name": "Tobacco leaf disease segmentation dataset referenced by MD-Unet",
+        "repository": "Kaggle",
+        "url": "https://www.kaggle.com/datasets/chzili/dataset-for-tobacco-leaf-disease-segmentation",
+        "paper_url": "https://www.nature.com/articles/s41598-025-87128-y",
+        "role": "candidate_only",
+        "notes": "Publicly referenced by the paper, but CropMedic must verify the dataset license and class definitions before using it for training. Do not ingest automatically."
+      },
+      "crop_recognition_source": {
+        "name": "Tobacco and Weed Detection Dataset",
+        "repository": "Zenodo",
+        "url": "https://zenodo.org/records/17036966",
+        "capture": "smartphone field images of tobacco and weeds",
+        "role": "crop_recognition_candidate",
+        "notes": "Useful for plant-level crop recognition/OOD work, not a disease classifier."
+      }
+    }
+  ]
+}
