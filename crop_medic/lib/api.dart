@@ -84,6 +84,39 @@ class CropGuess {
   }
 }
 
+class ApiCapabilities {
+  final List<String> diagnosisSupportedCrops;
+  final List<String> cropIdentificationSupportedCrops;
+  final String cropIdentificationMode;
+  final List<Map<String, dynamic>> cropSpecificModels;
+  final List<String> languages;
+
+  const ApiCapabilities({
+    required this.diagnosisSupportedCrops,
+    required this.cropIdentificationSupportedCrops,
+    required this.cropIdentificationMode,
+    required this.cropSpecificModels,
+    required this.languages,
+  });
+
+  factory ApiCapabilities.fromJson(Map<String, dynamic> json) {
+    final diagnosis = json['diagnosis_supported_crops'] as List<dynamic>? ?? const [];
+    final identification = json['crop_identification_supported_crops'] as List<dynamic>? ?? const [];
+    final models = json['crop_specific_models'] as List<dynamic>? ?? const [];
+    final languages = json['languages'] as List<dynamic>? ?? const [];
+    return ApiCapabilities(
+      diagnosisSupportedCrops: diagnosis.map((e) => e.toString()).toList(),
+      cropIdentificationSupportedCrops: identification.map((e) => e.toString()).toList(),
+      cropIdentificationMode: (json['crop_identification_mode'] as String?) ?? '',
+      cropSpecificModels: models
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(),
+      languages: languages.map((e) => e.toString()).toList(),
+    );
+  }
+}
+
 class Diagnosis {
   final bool accepted;
   final String crop;
@@ -158,6 +191,28 @@ String _errorDetail(http.Response response) {
   return 'Something went wrong. Try again.';
 }
 
+Future<Map<String, dynamic>> _getJson(String path) async {
+  try {
+    final response = await http
+        .get(Uri.parse('$baseUrl$path'))
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      throw ApiException(_errorDetail(response));
+    }
+    final body = jsonDecode(response.body);
+    if (body is! Map<String, dynamic>) {
+      throw ApiException('CropMedic received an invalid response from the server.');
+    }
+    return body;
+  } on ApiException {
+    rethrow;
+  } on TimeoutException {
+    throw ApiException('The server took too long. Check your connection.');
+  } catch (_) {
+    throw ApiException("Can't reach the CropMedic server. Check your connection.");
+  }
+}
+
 http.MultipartRequest _imageRequest(String path, Uint8List bytes) {
   final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
   request.files.add(http.MultipartFile.fromBytes(
@@ -190,6 +245,11 @@ Future<Map<String, dynamic>> _sendImageRequest(http.MultipartRequest request) as
   } catch (_) {
     throw ApiException("Can't reach the CropMedic server. Check your connection.");
   }
+}
+
+Future<ApiCapabilities> fetchCapabilities() async {
+  final body = await _getJson('/api/capabilities');
+  return ApiCapabilities.fromJson(body);
 }
 
 Future<CropGuess> identifyCrop(Uint8List bytes) async {
