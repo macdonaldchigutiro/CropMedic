@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "policy": "Only enable a crop after independent external validation, rejection testing, guidance review, and an explicit promotion decision.",
+  "crops": [
+    {
+      "crop": "Common bean",
+      "directory": "common_bean",
+      "enabled": false,
+      "release_status": "pilot_training_and_validation",
+      "confidence_threshold": 0.75,
+      "margin_threshold": 0.15
+    },
+    {
+      "crop": "Soybean",
+      "directory": "soybean",
+      "enabled": false,
+      "release_status": "dataset_preparation",
+      "confidence_threshold": 0.75,
+      "margin_threshold": 0.15
+    },
+    {
+      "crop": "Wheat",
+      "directory": "wheat",
+      "enabled": false,
+      "release_status": "dataset_preparation",
+      "confidence_threshold": 0.75,
+      "margin_threshold": 0.15
+    },
+    {
+      "crop": "Sorghum",
+      "directory": "sorghum",
+      "enabled": false,
+      "release_status": "dataset_preparation",
+      "confidence_threshold": 0.75,
+      "margin_threshold": 0.15
+    },
+    {
+      "crop": "Tobacco",
+      "directory": "tobacco",
+      "enabled": false,
+      "release_status": "blocked_pending_dataset_license_and_validation",
+      "confidence_threshold": 0.75,
+      "margin_threshold": 0.15
+    }
+  ]
+}
