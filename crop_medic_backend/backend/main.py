@@ -24,9 +24,12 @@ ADVICE = json.loads((BASE / "advice.json").read_text(encoding="utf-8"))
 IMG_SIZE = 224
 LOW_CONFIDENCE = 0.70
 MIN_PREDICTION_MARGIN = 0.15
+CROP_MIN_RAW_SCORE = 0.35
+CROP_MIN_MARGIN = 0.10
 TOP_K = 3
 SUPPORTED_LANGS = {"en", "sn", "nd", "toi"}
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+SUPPORTED_CROPS = ("Maize", "Tomato", "Potato", "Bell pepper")
 
 APP_ENV = os.getenv("CROPMEDIC_ENV", "development").strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
@@ -108,12 +111,12 @@ def _rate_limit_exceeded(request: Request) -> tuple[bool, int]:
 
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
-    if request.method == "POST" and request.url.path == "/api/predict":
+    if request.method == "POST" and request.url.path in {"/api/predict", "/api/identify-crop"}:
         exceeded, retry_after = _rate_limit_exceeded(request)
         if exceeded:
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Too many diagnosis requests. Please try again shortly."},
+                content={"detail": "Too many analysis requests. Please try again shortly."},
                 headers={"Retry-After": str(retry_after)},
             )
 
@@ -184,6 +187,21 @@ def split_label(raw: str):
     return crop.replace("_", " ").strip(), disease.replace("_", " ").strip()
 
 
+def normalize_crop_name(raw: str) -> str:
+    value = raw.replace("_", " ").strip().lower()
+    aliases = {
+        "corn (maize)": "Maize",
+        "corn": "Maize",
+        "maize": "Maize",
+        "tomato": "Tomato",
+        "potato": "Potato",
+        "pepper, bell": "Bell pepper",
+        "bell pepper": "Bell pepper",
+        "pepper": "Bell pepper",
+    }
+    return aliases.get(value, raw.replace("_", " ").strip())
+
+
 def get_advice(raw: str, lang: str):
     if raw.lower().endswith("healthy"):
         entry = ADVICE["_healthy"]
@@ -241,35 +259,17 @@ def _decode_and_validate_image(image_bytes: bytes) -> Image.Image:
         raise HTTPException(status_code=400, detail="Couldn't read that image.") from exc
 
 
-@app.get("/api/health")
-def health():
-    ready = model is not None and bool(class_names)
-    payload = {
-        "status": "ready" if ready else "unavailable",
-        "model_loaded": ready,
-        "class_count": len(class_names),
-    }
-    if not IS_PRODUCTION:
-        payload["model_error"] = model_error
-    return payload
-
-
-@app.post("/api/predict")
-async def predict(file: UploadFile = File(...), lang: str = "en"):
-    ensure_model_ready()
-
+async def _read_upload(file: UploadFile) -> bytes:
     if not file.content_type or not file.content_type.lower().startswith("image/"):
         raise HTTPException(status_code=400, detail="Upload an image file.")
-
-    lang = lang.lower().strip()
-    if lang not in SUPPORTED_LANGS:
-        lang = "en"
-
     image_bytes = await file.read(MAX_IMAGE_BYTES + 1)
     await file.close()
-    img = _decode_and_validate_image(image_bytes)
+    _decode_and_validate_image(image_bytes)
+    return image_bytes
 
-    img = img.resize((IMG_SIZE, IMG_SIZE))
+
+def _model_probabilities(image_bytes: bytes) -> np.ndarray:
+    img = _decode_and_validate_image(image_bytes).resize((IMG_SIZE, IMG_SIZE))
     arr = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
 
     try:
@@ -285,36 +285,144 @@ async def predict(file: UploadFile = File(...), lang: str = "en"):
             status_code=503,
             detail="The diagnosis model returned an invalid result. No diagnosis was generated.",
         )
+    return probs
 
-    top_indices = np.argsort(probs)[::-1][: min(TOP_K, len(class_names))]
+
+def _indices_for_crop(crop: str) -> list[int]:
+    canonical = normalize_crop_name(crop)
+    return [
+        idx
+        for idx, raw in enumerate(class_names)
+        if normalize_crop_name(split_label(raw)[0]) == canonical
+    ]
+
+
+@app.get("/api/health")
+def health():
+    ready = model is not None and bool(class_names)
+    payload = {
+        "status": "ready" if ready else "unavailable",
+        "model_loaded": ready,
+        "class_count": len(class_names),
+        "supported_crops": list(SUPPORTED_CROPS),
+    }
+    if not IS_PRODUCTION:
+        payload["model_error"] = model_error
+    return payload
+
+
+@app.post("/api/identify-crop")
+async def identify_crop(file: UploadFile = File(...)):
+    """
+    Bootstrap crop identification using the current four-crop disease model.
+
+    This is deliberately presented to the client as a suggestion that the farmer must
+    confirm. It is not a standalone field-validated crop-recognition model yet.
+    """
+    ensure_model_ready()
+    image_bytes = await _read_upload(file)
+    probs = _model_probabilities(image_bytes)
+
+    raw_scores = {crop: 0.0 for crop in SUPPORTED_CROPS}
+    for idx, raw in enumerate(class_names):
+        crop = normalize_crop_name(split_label(raw)[0])
+        if crop in raw_scores:
+            raw_scores[crop] = max(raw_scores[crop], float(probs[idx]))
+
+    total = sum(raw_scores.values()) or 1.0
+    ranked = sorted(raw_scores.items(), key=lambda item: item[1], reverse=True)
+    top_crop, top_raw = ranked[0]
+    second_raw = ranked[1][1] if len(ranked) > 1 else 0.0
+    candidates = [
+        {
+            "crop": crop,
+            "confidence": round(score / total, 3),
+            "raw_score": round(score, 3),
+        }
+        for crop, score in ranked
+    ]
+
+    accepted = top_raw >= CROP_MIN_RAW_SCORE and (top_raw - second_raw) >= CROP_MIN_MARGIN
+    return {
+        "accepted": accepted,
+        "crop": top_crop if accepted else "",
+        "confidence": round(top_raw / total, 3),
+        "message": None
+        if accepted
+        else "CropMedic is not confident which supported crop this is. Please choose the crop before diagnosis.",
+        "candidates": candidates,
+        "supported_crops": list(SUPPORTED_CROPS),
+        "bootstrap": True,
+    }
+
+
+@app.post("/api/predict")
+async def predict(file: UploadFile = File(...), lang: str = "en", crop: str | None = None):
+    ensure_model_ready()
+
+    lang = lang.lower().strip()
+    if lang not in SUPPORTED_LANGS:
+        lang = "en"
+
+    image_bytes = await _read_upload(file)
+    probs = _model_probabilities(image_bytes)
+
+    if crop:
+        canonical_crop = normalize_crop_name(crop)
+        selected_indices = _indices_for_crop(canonical_crop)
+        if canonical_crop not in SUPPORTED_CROPS or not selected_indices:
+            raise HTTPException(status_code=400, detail="That crop is not yet supported for AI diagnosis.")
+
+        selected_probs = np.asarray([float(probs[idx]) for idx in selected_indices], dtype=np.float32)
+        crop_mass = float(np.sum(selected_probs))
+        if crop_mass <= 0 or not np.isfinite(crop_mass):
+            raise HTTPException(status_code=503, detail="The model could not score that crop reliably.")
+
+        conditional = selected_probs / crop_mass
+        local_order = np.argsort(conditional)[::-1]
+        ordered_indices = [selected_indices[int(i)] for i in local_order]
+        confidence_values = [float(conditional[int(i)]) for i in local_order]
+        crop_match_score = float(np.max(selected_probs))
+    else:
+        ordered_indices = [int(i) for i in np.argsort(probs)[::-1]]
+        confidence_values = [float(probs[i]) for i in ordered_indices]
+        crop_match_score = confidence_values[0]
+        canonical_crop = normalize_crop_name(split_label(class_names[ordered_indices[0]])[0])
+
+    top_indices = ordered_indices[: min(TOP_K, len(ordered_indices))]
+    top_confidences = confidence_values[: min(TOP_K, len(confidence_values))]
     predictions = []
-    for idx in top_indices:
-        raw_label = class_names[int(idx)]
-        crop, disease = split_label(raw_label)
+    for idx, candidate_confidence in zip(top_indices, top_confidences):
+        raw_label = class_names[idx]
+        raw_crop, disease = split_label(raw_label)
         predictions.append(
             {
-                "crop": crop,
+                "crop": normalize_crop_name(raw_crop),
                 "disease": disease,
-                "confidence": round(float(probs[int(idx)]), 3),
+                "confidence": round(candidate_confidence, 3),
             }
         )
 
     primary_idx = int(top_indices[0])
-    confidence = float(probs[primary_idx])
-    second_confidence = float(probs[int(top_indices[1])]) if len(top_indices) > 1 else 0.0
+    confidence = float(top_confidences[0])
+    second_confidence = float(top_confidences[1]) if len(top_confidences) > 1 else 0.0
     prediction_margin = confidence - second_confidence
 
     accepted = confidence >= LOW_CONFIDENCE and prediction_margin >= MIN_PREDICTION_MARGIN
+    if crop and crop_match_score < 0.12:
+        accepted = False
+
     if not accepted:
+        crop_text = f" {canonical_crop}" if crop else " supported crop"
         return {
             "accepted": False,
-            "crop": "",
+            "crop": canonical_crop if crop else "",
             "disease": "",
             "confidence": round(confidence, 3),
             "low_confidence": True,
             "message": (
-                "Crop Medic could not verify this as a clear supported crop-leaf image. "
-                "Use one maize, tomato, potato or bell-pepper leaf in good light and try again."
+                f"CropMedic could not make a reliable diagnosis from this{crop_text} image. "
+                "Use a clear photo of the affected plant part in good light and try again."
             ),
             "advice": [],
             "top_predictions": predictions,
@@ -322,11 +430,12 @@ async def predict(file: UploadFile = File(...), lang: str = "en"):
         }
 
     raw = class_names[primary_idx]
-    crop, disease = split_label(raw)
+    raw_crop, disease = split_label(raw)
+    result_crop = normalize_crop_name(raw_crop)
 
     return {
         "accepted": True,
-        "crop": crop,
+        "crop": result_crop,
         "disease": disease,
         "confidence": round(confidence, 3),
         "low_confidence": False,
