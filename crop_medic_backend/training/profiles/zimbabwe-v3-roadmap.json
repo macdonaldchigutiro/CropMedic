@@ -1,0 +1,47 @@
+{
+  "id": "zimbabwe-v3-roadmap",
+  "country": "Zimbabwe",
+  "architecture": [
+    "image quality and plant-part check",
+    "crop identification",
+    "farmer confirmation or correction",
+    "crop-specific disease diagnosis",
+    "guidance and reporting"
+  ],
+  "current_bootstrap_ai_crops": [
+    "Maize",
+    "Tomato",
+    "Potato",
+    "Bell pepper"
+  ],
+  "priority_expansion_crops": [
+    "Soybean",
+    "Common beans",
+    "Peas",
+    "Tobacco",
+    "Wheat",
+    "Sorghum",
+    "Pearl millet",
+    "Finger millet / rapoko",
+    "Pumpkin",
+    "Watermelon",
+    "Onion",
+    "Cabbage",
+    "Leafy vegetables",
+    "Mushroom",
+    "Groundnut",
+    "Sweet potato",
+    "Cucumber",
+    "Carrot",
+    "Sunflower",
+    "Cotton"
+  ],
+  "release_rule": "A crop must not be marked AI-supported until suitable disease classes, training data, external validation and field-style testing are complete.",
+  "model_strategy": "Prefer a crop-recognition stage followed by crop-specific disease models instead of one ever-growing crop-by-disease classifier.",
+  "notes": [
+    "The current crop identifier is a bootstrap suggestion derived from the four-crop disease model and always requires farmer confirmation.",
+    "Unsupported crops must not be forced into one of the four current diagnosis classes.",
+    "Some crops require affected-part imaging rather than leaf-only imaging, for example mushrooms, onions, fruits and stems.",
+    "Translations used in the app should receive native-speaker and agricultural terminology review before public release."
+  ]
+}
