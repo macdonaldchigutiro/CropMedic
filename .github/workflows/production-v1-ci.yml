@@ -1,0 +1,52 @@
+name: CropMedic production-v1 checks
+
+on:
+  push:
+    branches: [production-v1]
+  pull_request:
+    branches: [production-v1]
+
+jobs:
+  python-syntax-and-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile backend and training Python
+        run: python -m compileall -q crop_medic_backend/backend crop_medic_backend/training
+      - name: Validate model registry JSON
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('crop_medic_backend/backend/models/registry.json')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          assert payload.get('schema_version') == 1
+          crops = payload.get('crops')
+          assert isinstance(crops, list) and crops
+          names = [item['crop'] for item in crops]
+          assert len(names) == len(set(names)), 'duplicate registry crop names'
+          for item in crops:
+              assert item['directory']
+              assert isinstance(item['enabled'], bool)
+              assert 0 < float(item['confidence_threshold']) <= 1
+              assert 0 <= float(item['margin_threshold']) <= 1
+          print('registry ok:', ', '.join(names))
+          PY
+
+  flutter-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Flutter dependencies
+        working-directory: crop_medic
+        run: flutter pub get
+      - name: Flutter analyze
+        working-directory: crop_medic
+        run: flutter analyze
