@@ -9,7 +9,9 @@ The script first tries Mendeley's public dataset API. If automated download is
 blocked, pass a locally downloaded ZIP with --zip-path.
 
 The Mendeley browser download may itself contain another ZIP archive. This
-preparer therefore walks nested ZIP files as well as ordinary folders.
+preparer therefore walks nested ZIP files as well as ordinary folders. Large
+nested archives are streamed to a temporary file instead of being loaded into
+RAM.
 
 Output layout:
   data_batch1/common_bean/
@@ -26,7 +28,6 @@ Examples:
 from __future__ import annotations
 
 import argparse
-import io
 import json
 import re
 import shutil
@@ -46,14 +47,17 @@ DOWNLOAD_EVENT = (
 )
 
 CLASS_RULES = {
-    "Angular Leaf Spot": {"angularleafspot", "als", "angular"},
+    "Angular Leaf Spot": {"angularleafspot", "als", "angular", "angularleafspotdisease"},
     "Anthracnose": {"anthracnose", "anthra", "ant"},
-    "Mosaic Virus": {"mosaicvirus", "mosaic", "mv"},
-    "Rust": {"rust"},
-    "Healthy": {"healthyleaves", "healthy", "hlt"},
+    "Mosaic Virus": {"mosaicvirus", "mosaic", "mv", "beancommonmosaicvirus"},
+    "Rust": {"rust", "beanrust"},
+    "Healthy": {"healthyleaves", "healthy", "hlt", "healthyleaf"},
 }
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
-MAX_NESTED_ZIP_BYTES = 2 * 1024 * 1024 * 1024
+# This is a guard against accidental archive bombs, not a RAM limit: nested
+# archives are streamed to disk. The high-resolution source can legitimately be
+# several GB, so keep the ceiling generous.
+MAX_NESTED_ZIP_BYTES = 15 * 1024 * 1024 * 1024
 
 
 def parse_args():
@@ -152,7 +156,7 @@ def _write_image(
         target = target_dir / f"{_norm(label)}_{index:05d}{suffix}"
 
     with archive.open(info) as src, target.open("wb") as dst:
-        shutil.copyfileobj(src, dst)
+        shutil.copyfileobj(src, dst, length=1024 * 1024)
     counts[label] += 1
     return True
 
@@ -162,6 +166,7 @@ def _walk_archive(
     output_dir: Path,
     counts: dict[str, int],
     seen_names: list[str],
+    temp_root: Path,
     prefix: str = "",
     depth: int = 0,
 ) -> None:
@@ -173,7 +178,7 @@ def _walk_archive(
             continue
 
         logical_name = f"{prefix}{info.filename}"
-        if len(seen_names) < 60:
+        if len(seen_names) < 100:
             seen_names.append(logical_name)
 
         if _write_image(archive, info, logical_name, output_dir, counts):
@@ -181,23 +186,42 @@ def _walk_archive(
 
         if Path(info.filename).suffix.lower() != ".zip":
             continue
-        if info.file_size <= 0 or info.file_size > MAX_NESTED_ZIP_BYTES:
+        if info.file_size <= 0:
+            print(f"Skipping empty nested ZIP: {logical_name}")
+            continue
+        if info.file_size > MAX_NESTED_ZIP_BYTES:
+            print(
+                f"Skipping nested ZIP larger than safety limit: {logical_name} "
+                f"({info.file_size / (1024**3):.2f} GiB)"
+            )
             continue
 
+        nested_path = temp_root / f"nested_{depth}_{abs(hash(logical_name))}.zip"
         try:
-            nested_bytes = archive.read(info)
-            with zipfile.ZipFile(io.BytesIO(nested_bytes)) as nested:
+            print(
+                f"Extracting nested ZIP: {logical_name} "
+                f"({info.file_size / (1024**3):.2f} GiB uncompressed)"
+            )
+            with archive.open(info) as src, nested_path.open("wb") as dst:
+                shutil.copyfileobj(src, dst, length=4 * 1024 * 1024)
+            with zipfile.ZipFile(nested_path) as nested:
                 print(f"Opening nested ZIP: {logical_name}")
                 _walk_archive(
                     nested,
                     output_dir,
                     counts,
                     seen_names,
+                    temp_root=temp_root,
                     prefix=f"{logical_name}::",
                     depth=depth + 1,
                 )
         except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
             print(f"Skipping unreadable nested ZIP {logical_name}: {exc}")
+        finally:
+            try:
+                nested_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 def _stage(zip_path: Path, output_dir: Path) -> tuple[dict[str, int], list[str]]:
@@ -205,8 +229,16 @@ def _stage(zip_path: Path, output_dir: Path) -> tuple[dict[str, int], list[str]]
     counts = {name: 0 for name in CLASS_RULES}
     seen_names: list[str] = []
 
-    with zipfile.ZipFile(zip_path) as archive:
-        _walk_archive(archive, output_dir, counts, seen_names)
+    with tempfile.TemporaryDirectory(prefix="cropmedic_nested_zips_") as tmp:
+        temp_root = Path(tmp)
+        with zipfile.ZipFile(zip_path) as archive:
+            _walk_archive(
+                archive,
+                output_dir,
+                counts,
+                seen_names,
+                temp_root=temp_root,
+            )
 
     return counts, seen_names
 
@@ -254,11 +286,11 @@ def main():
     missing = [name for name, count in counts.items() if count == 0]
     if total == 0:
         print("\nNo classed images were found. First archive entries were:")
-        for name in seen_names[:40]:
+        for name in seen_names[:60]:
             print(f"  {name}")
         raise SystemExit(
             "No usable bean images were found in the selected ZIP. "
-            "Check that this is the Common Bean dataset download rather than another recent ZIP."
+            "The archive was read successfully, but its folder labels did not match the expected classes."
         )
     if missing:
         raise SystemExit(
