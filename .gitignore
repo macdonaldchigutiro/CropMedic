@@ -14,7 +14,10 @@ env/
 
 # CropMedic training data / generated model artifacts
 crop_medic_backend/training/data/
+crop_medic_backend/training/data_batch1/
+crop_medic_backend/training/crop_identifier_data/
 crop_medic_backend/training/artifacts/
+crop_medic_backend/training/artifacts_batch1/
 crop_medic_backend/backend/model/
 
 # Flutter / Dart
