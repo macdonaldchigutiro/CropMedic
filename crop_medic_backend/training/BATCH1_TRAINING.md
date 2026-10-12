@@ -21,10 +21,44 @@ Do not mix external validation images into training before the baseline is froze
 The machine-readable registry is `profiles/zimbabwe-v3-batch1-sources.json`.
 
 - **Soybean** — Mendeley `10.17632/6fhphxg297.2`, CC BY 4.0, five field-image classes. Auburn ASDID is reserved for external validation initially.
-- **Common bean** — Makerere/NaCRRI Beans dataset, CC BY 4.0, Ugandan field smartphone images. Tanzania Zenodo `10.5281/zenodo.15685315` is a large external-validation/expansion source.
+- **Common bean** — Mendeley `10.17632/89c9r5m2gx.1`, CC BY 4.0, 3,180 mobile-phone images covering Healthy, Angular Leaf Spot, Anthracnose, Mosaic Virus and Rust. The older Makerere/NaCRRI TFDS dataset is still valuable, but its published Google Cloud download currently returns HTTP 403, so it no longer blocks Batch 1. Tanzania Zenodo `10.5281/zenodo.15685315` remains reserved for external validation/expansion.
 - **Wheat** — Mendeley `10.17632/wgd66f8n6h.1`, CC BY 4.0, real Ethiopian wheat-field images with Healthy, Stripe Rust and Septoria. A larger Bangladesh source can expand disease coverage later.
 - **Sorghum** — Mendeley `10.17632/fgb3cmfrg2.1`, CC BY 4.0. It contains leaf and head/grain diseases, so CropMedic must support affected-part photos rather than a leaf-only assumption.
 - **Tobacco** — disease dataset is not approved yet. The public Kaggle source referenced by the MD-Unet paper still needs licence/class review before ingestion. Keep tobacco disabled for disease diagnosis until this is resolved.
+
+## Common bean preparation
+
+Preferred command:
+
+```powershell
+python prepare_common_bean_mendeley.py
+```
+
+For compatibility, this also works:
+
+```powershell
+python prepare_common_bean_tfds.py
+```
+
+The compatibility command now delegates to the Mendeley preparer instead of the broken TFDS download host.
+
+If the Mendeley API refuses an automated download, open the dataset page in a browser, download the ZIP, then run:
+
+```powershell
+python prepare_common_bean_mendeley.py --zip-path "C:\path\to\downloaded.zip"
+```
+
+Expected output layout:
+
+```text
+data_batch1/
+  common_bean/
+    Healthy/
+    Angular Leaf Spot/
+    Anthracnose/
+    Mosaic Virus/
+    Rust/
+```
 
 ## Local folder layout
 
@@ -41,7 +75,9 @@ data_batch1/
   common_bean/
     Healthy/
     Angular Leaf Spot/
-    Bean Rust/
+    Anthracnose/
+    Mosaic Virus/
+    Rust/
   wheat/
     Healthy/
     Stripe Rust/
