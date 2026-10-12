@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -45,60 +44,63 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _capture() async {
     if (_busy) return;
 
-    if (!kIsWeb) {
+    // image_picker_for_web maps ImageSource.camera to the browser's
+    // HTML capture hint where supported. On mobile Safari/Chrome this can
+    // open the device camera directly; desktop browsers may fall back to
+    // the normal file chooser.
+    try {
       await _pick(ImageSource.camera);
-      return;
-    }
-
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Palette.surface,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(22, 6, 22, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tr('cameraDesktopTitle'),
-                  style: const TextStyle(
-                    fontFamily: 'Georgia',
-                    color: Palette.primaryDark,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+    } catch (_) {
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Palette.surface,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(22, 6, 22, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr('cameraDesktopTitle'),
+                    style: const TextStyle(
+                      fontFamily: 'Georgia',
+                      color: Palette.primaryDark,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  tr('cameraDesktopText'),
-                  style: const TextStyle(
-                    color: Palette.textDim,
-                    height: 1.45,
-                    fontSize: 15,
+                  const SizedBox(height: 10),
+                  Text(
+                    tr('cameraDesktopText'),
+                    style: const TextStyle(
+                      color: Palette.textDim,
+                      height: 1.45,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                PrimaryActionButton(
-                  label: tr('choosePhoto'),
-                  icon: Icons.photo_library_rounded,
-                  onPressed: () {
-                    Navigator.pop(sheetContext);
-                    _pick(ImageSource.gallery);
-                  },
-                ),
-              ],
+                  const SizedBox(height: 18),
+                  PrimaryActionButton(
+                    label: tr('choosePhoto'),
+                    icon: Icons.photo_library_rounded,
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      _pick(ImageSource.gallery);
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
 
   void _showTip(String title, String body, IconData icon) {
