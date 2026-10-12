@@ -54,6 +54,18 @@
       "display_name": "Common bean",
       "status": "approved_for_pilot_training",
       "primary_source": {
+        "name": "BLD-BD: A Field-Based Image Dataset of Bean Leaf Diseases for Deep Learning & Computer Vision Research",
+        "repository": "Mendeley Data",
+        "doi": "10.17632/3k46s46x3s.1",
+        "url": "https://data.mendeley.com/datasets/3k46s46x3s/1",
+        "license": "CC BY 4.0",
+        "capture": "field-collected images from Bangladesh, standardized to 512x512",
+        "image_count": 672,
+        "classes": ["Healthy", "Angular Leaf Spot", "Bean Common Mosaic Virus"],
+        "role": "pilot_training",
+        "notes": "Use Original_Bean_Leaf_Disease_Dataset.zip only. Keep the augmented archive out of the first baseline to avoid train/test leakage from derived images."
+      },
+      "secondary_training_source": {
         "name": "High-Resolution Dataset of Common Bean Leaf Diseases in Bangladesh",
         "repository": "Mendeley Data",
         "doi": "10.17632/89c9r5m2gx.1",
@@ -62,8 +74,8 @@
         "capture": "natural-daylight mobile-phone images of common bean leaves collected from fields",
         "image_count": 3180,
         "classes": ["Healthy", "Angular Leaf Spot", "Anthracnose", "Mosaic Virus", "Rust"],
-        "role": "pilot_training",
-        "notes": "Images use a clean A4 background, so keep truly in-field smartphone images for external validation."
+        "role": "later_expansion_after_pilot",
+        "notes": "The browser download contains a nested archive that expands to about 8.6 GiB. Keep it for later expansion or cloud preparation rather than blocking the local pilot."
       },
       "deprecated_source": {
         "name": "Makerere AI Lab / NaCRRI Beans dataset",
