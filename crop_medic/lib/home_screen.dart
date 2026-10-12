@@ -26,26 +26,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String ui(String en, String sn, String nd, String toi) {
     switch (_lang) {
-      case 'sn': return sn;
-      case 'nd': return nd;
-      case 'toi': return toi;
-      default: return en;
-    }
-  }
-
-  double get _heroTitleSize {
-    switch (_lang) {
       case 'sn':
+        return sn;
       case 'nd':
-        return 25;
+        return nd;
       case 'toi':
-        return 27;
+        return toi;
       default:
-        return 31;
+        return en;
     }
   }
-
-  double get _heroHeight => _lang == 'en' ? 245 : 282;
 
   Future<void> _pickGallery() async {
     if (_busy) return;
@@ -55,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
       imageQuality: 88,
     );
     if (picked == null || !mounted) return;
+
     final bytes = await picked.readAsBytes();
     setState(() => _busy = true);
     await startDiagnosisFlow(context, bytes, _lang);
@@ -62,19 +53,219 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openScan() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ScanScreen(lang: _lang)));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ScanScreen(lang: _lang)),
+    );
   }
 
   void _openLibrary() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => DiseaseLibraryScreen(lang: _lang)));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => DiseaseLibraryScreen(lang: _lang)),
+    );
   }
 
   void _openWeather() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => WeatherScreen(lang: _lang)));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => WeatherScreen(lang: _lang)),
+    );
   }
 
   void _openHelp() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExtensionHelpScreen(lang: _lang)));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ExtensionHelpScreen(lang: _lang)),
+    );
+  }
+
+  Future<void> _showResultInfo() async {
+    await _showFeatureSheet(
+      icon: Icons.fact_check_rounded,
+      title: ui(
+        'What happens after a scan?',
+        'Chii chinoitika mushure mescan?',
+        'Kwenzakalani ngemva kwescan?',
+        'Ncinzi cicitika mwamana kuscan?',
+      ),
+      text: ui(
+        'CropMedic shows the crop, the most likely condition, confidence, other possibilities and practical next steps. Results only appear after you scan or upload a leaf photo.',
+        'CropMedic inoratidza chirimwa, chirwere chingangove chiripo, chivimbo, zvimwe zvingangove uye zvekuita zvinotevera. Mhedzisiro inoonekwa mushure mekuskena kana kuisa mufananidzo weshizha.',
+        'CropMedic ikhombisa isilimo, isifo esingaba khona, ukuthembeka, okunye okungenzeka kanye lezinyathelo ezilandelayo. Impumela ivela ngemva kokuskena kumbe ukufaka umfanekiso weqabunga.',
+        'CropMedic itondeezya mulimo, bulwazi buboneka, kululama, zimbi zyobona azya kucita. Mbuyanda iboneka mwamana kuscan na kuuploada foto yashizha.',
+      ),
+      primaryLabel: tr('scanLeaf'),
+      onPrimary: _openScan,
+      secondaryLabel: tr('uploadPhoto'),
+      onSecondary: _pickGallery,
+    );
+  }
+
+  Future<void> _showGuidanceInfo() async {
+    await _showFeatureSheet(
+      icon: Icons.spa_rounded,
+      title: ui(
+        'Guidance that follows a diagnosis',
+        'Mazano anotevera kuongororwa',
+        'Isiqondiso ngemva kokuhlolwa',
+        'Lugwasyo mwamana kujanwa bulwazi',
+      ),
+      text: ui(
+        'After a supported diagnosis, CropMedic gives practical next steps. You can also browse the disease library for symptoms, prevention and general guidance.',
+        'Mushure mekuongororwa kunotsigirwa, CropMedic inopa zvekuita zvinotevera. Unogonawo kuona raibhurari yezvirwere yezviratidzo, kudzivirira nemazano.',
+        'Ngemva kokuhlolwa okusekelwayo, CropMedic inika izinyathelo ezilandelayo. Ungabuye ubone umtapo wezifo wezimpawu, ukuvikela lesiqondiso.',
+        'Mwamana kujanwa bulwazi, CropMedic ilapa zyakucita. Ulamvwa kubona layiburari yabuzwayi, zibonakaliso akuzwidilila.',
+      ),
+      primaryLabel: ui('Open disease library', 'Vhura raibhurari', 'Vula umtapo', 'Jula layiburari'),
+      onPrimary: _openLibrary,
+      secondaryLabel: tr('scanLeaf'),
+      onSecondary: _openScan,
+    );
+  }
+
+  Future<void> _showReportInfo() async {
+    await _showFeatureSheet(
+      icon: Icons.description_rounded,
+      title: ui(
+        'Printable reports',
+        'Mareport anoprintwa',
+        'Imibiko eprintwayo',
+        'Ma-report aamaprinta',
+      ),
+      text: ui(
+        'Reports are created from a completed diagnosis, so there is nothing to print from the home screen yet. Scan or upload a leaf first. On the result screen, tap “Create printable report” to download a PDF or Word report.',
+        'Report inogadzirwa mushure mekuongororwa, saka hapana report yekudhawunirodha pahome screen parizvino. Tanga waskena kana kuisa mufananidzo weshizha. Paresult screen, sarudza “Gadzira report inoprintwa” kuti uwane PDF kana Word.',
+        'Umbiko wenziwa ngemva kokuhlolwa, ngakho akula mbiko yokudawuniloda kuhome screen okwamanje. Qala ngokuskena kumbe ukufaka umfanekiso weqabunga. Kuresult screen khetha umbiko oprintwayo ukuze uthole PDF kumbe Word.',
+        'Report ikonziwa mwamana scan. Kunyina report yamaprinta pahome screen manje. Tanga wascan na kuuploada foto yashizha. Paresult screen salazya report yaamaprinta kuti udanilode PDF na Word.',
+      ),
+      primaryLabel: tr('scanLeaf'),
+      onPrimary: _openScan,
+      secondaryLabel: tr('uploadPhoto'),
+      onSecondary: _pickGallery,
+    );
+  }
+
+  Future<void> _showFeatureSheet({
+    required IconData icon,
+    required String title,
+    required String text,
+    required String primaryLabel,
+    required VoidCallback onPrimary,
+    required String secondaryLabel,
+    required VoidCallback onSecondary,
+  }) async {
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+            decoration: BoxDecoration(
+              color: Palette.surface,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x24000000),
+                  blurRadius: 30,
+                  offset: Offset(0, -6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Palette.border,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: 58,
+                  height: 58,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Palette.primarySoft,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(icon, color: Palette.primary, size: 30),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Georgia',
+                    color: Palette.primaryDark,
+                    fontSize: 24,
+                    height: 1.12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  text,
+                  style: const TextStyle(
+                    color: Palette.textDim,
+                    fontSize: 14.5,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      onPrimary();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Palette.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: Text(
+                      primaryLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      onSecondary();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Palette.primaryDark,
+                      side: const BorderSide(color: Palette.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      secondaryLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -112,13 +303,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 13),
                           _supportedCrops(),
                           const SizedBox(height: 24),
-                          Text(
-                            ui('Farmer tools', 'Zvishandiso zvemurimi', 'Amathuluzi omlimi', 'Zyakubelensya mulimi'),
-                            style: const TextStyle(
-                              fontFamily: 'Georgia',
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Palette.primaryDark,
+                          _sectionTitle(
+                            ui(
+                              'Farmer tools',
+                              'Zvishandiso zvemurimi',
+                              'Amathuluzi omlimi',
+                              'Zyakubelensya mulimi',
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -129,84 +319,127 @@ class _HomeScreenState extends State<HomeScreen> {
                               'Ulwazi oluncedayo lalapho ungasikeni iqabunga.',
                               'Makani aagwasya nokuba utasikeni shizha.',
                             ),
-                            style: const TextStyle(color: Palette.textDim, height: 1.35),
+                            style: const TextStyle(
+                              color: Palette.textDim,
+                              height: 1.35,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           _ToolCard(
                             icon: Icons.menu_book_rounded,
-                            title: ui('Crop disease library', 'Raibhurari yezvirwere', 'Umtapo wezifo zezilimo', 'Layiburari yabuzwayi'),
-                            text: ui('Symptoms, prevention and practical first steps.', 'Zviratidzo, kudzivirira nezvekutanga kuita.', 'Izimpawu, ukuvikela lokuqala ukukwenza.', 'Zibonakaliso, kuzwidilila azya kutanguna.'),
+                            title: ui(
+                              'Crop disease library',
+                              'Raibhurari yezvirwere',
+                              'Umtapo wezifo zezilimo',
+                              'Layiburari yabuzwayi',
+                            ),
+                            text: ui(
+                              'Symptoms, prevention and practical first steps.',
+                              'Zviratidzo, kudzivirira nezvekutanga kuita.',
+                              'Izimpawu, ukuvikela lokuqala ukukwenza.',
+                              'Zibonakaliso, kuzwidilila azya kutanguna.',
+                            ),
                             onTap: _openLibrary,
                           ),
                           const SizedBox(height: 10),
                           _ToolCard(
                             icon: Icons.cloud_rounded,
-                            title: ui('Weather & crop risk', 'Mamiriro ekunze nenjodzi', 'Isimo sezulu lengozi', 'Mvula anjodzi'),
-                            text: ui('Live conditions plus simple disease and spraying alerts.', 'Mamiriro aripo pamwe neyambiro yezvirwere nekupfapfaidza.', 'Isimo samanje lezixwayiso zezifo lokufafaza.', 'Mvula lino alulayo lwabuzwayi akuspreeja.'),
+                            title: ui(
+                              'Weather & crop risk',
+                              'Mamiriro ekunze nenjodzi',
+                              'Isimo sezulu lengozi',
+                              'Mvula anjodzi',
+                            ),
+                            text: ui(
+                              'Live conditions plus simple disease and spraying alerts.',
+                              'Mamiriro aripo pamwe neyambiro yezvirwere nekupfapfaidza.',
+                              'Isimo samanje lezixwayiso zezifo lokufafaza.',
+                              'Mvula lino alulayo lwabuzwayi akuspreeja.',
+                            ),
                             onTap: _openWeather,
                           ),
                           const SizedBox(height: 10),
                           _ToolCard(
                             icon: Icons.support_agent_rounded,
-                            title: ui('Extension services', 'Rubatsiro rwevarimisi', 'Usizo lwabalimi', 'Lugwasyo lwabalimi'),
-                            text: ui('Find agricultural offices and verified public contacts.', 'Tsvaga mahofisi nemacontact anoongororwa.', 'Thola amahofisi lama-contact aqinisekisiweyo.', 'Jana maofesi amacontact asinizidwe.'),
+                            title: ui(
+                              'Extension services',
+                              'Rubatsiro rwevarimisi',
+                              'Usizo lwabalimi',
+                              'Lugwasyo lwabalimi',
+                            ),
+                            text: ui(
+                              'Find agricultural offices and verified public contacts.',
+                              'Tsvaga mahofisi nemacontact anoongororwa.',
+                              'Thola amahofisi lama-contact aqinisekisiweyo.',
+                              'Jana maofesi amacontact asinizidwe.',
+                            ),
                             onTap: _openHelp,
                           ),
                           const SizedBox(height: 24),
+                          _sectionTitle(tr('howItWorks')),
+                          const SizedBox(height: 6),
                           Text(
-                            tr('howItWorks'),
+                            ui(
+                              'Tap a step to continue or learn what happens next.',
+                              'Baya padanho kuti uenderere mberi kana uzive zvinotevera.',
+                              'Cindezela inyathelo ukuze uqhubeke kumbe ufunde okulandelayo.',
+                              'Baya padanho kuti uzibe ciyobona alimwi.',
+                            ),
                             style: const TextStyle(
-                              fontFamily: 'Georgia',
-                              color: Palette.primaryDark,
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
+                              color: Palette.textDim,
+                              fontSize: 12.5,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: _StepCard(number: '1', icon: Icons.camera_alt_rounded, title: tr('takePhoto'), text: tr('takePhotoDesc'))),
+                              Expanded(
+                                child: _StepCard(
+                                  number: '1',
+                                  icon: Icons.camera_alt_rounded,
+                                  title: tr('takePhoto'),
+                                  text: tr('takePhotoDesc'),
+                                  onTap: _openScan,
+                                ),
+                              ),
                               const SizedBox(width: 8),
-                              Expanded(child: _StepCard(number: '2', icon: Icons.fact_check_rounded, title: tr('checkResult'), text: tr('checkResultDesc'))),
+                              Expanded(
+                                child: _StepCard(
+                                  number: '2',
+                                  icon: Icons.fact_check_rounded,
+                                  title: tr('checkResult'),
+                                  text: tr('checkResultDesc'),
+                                  onTap: _showResultInfo,
+                                ),
+                              ),
                               const SizedBox(width: 8),
-                              Expanded(child: _StepCard(number: '3', icon: Icons.spa_rounded, title: tr('getGuidance'), text: tr('getGuidanceDesc'))),
+                              Expanded(
+                                child: _StepCard(
+                                  number: '3',
+                                  icon: Icons.spa_rounded,
+                                  title: tr('getGuidance'),
+                                  text: tr('getGuidanceDesc'),
+                                  onTap: _showGuidanceInfo,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 18),
-                          AppCard(
-                            color: const Color(0xFFF2F6EE),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const CircleAvatar(
-                                  backgroundColor: Palette.primarySoft,
-                                  child: Icon(Icons.description_rounded, color: Palette.primary),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        ui('Printable reports', 'Mareport anoprintwa', 'Imibiko eprintwayo', 'Ma-report aamaprinta'),
-                                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        ui(
-                                          'After a diagnosis, create a Word or PDF-style report for your records or extension officer.',
-                                          'Mushure mekuongorora, gadzira report yeWord kana PDF yemarecord kana extension officer.',
-                                          'Ngemva kokuhlolwa, dala umbiko weWord kumbe PDF wamarekhodi kumbe extension officer.',
-                                          'Mwamana scan, konza report yaWord na PDF yamarecord na extension officer.',
-                                        ),
-                                        style: const TextStyle(color: Palette.textDim, height: 1.35),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                          _ReportCard(
+                            title: ui(
+                              'Printable reports',
+                              'Mareport anoprintwa',
+                              'Imibiko eprintwayo',
+                              'Ma-report aamaprinta',
                             ),
+                            text: ui(
+                              'Create a Word or PDF report after a diagnosis.',
+                              'Gadzira Word kana PDF report mushure mekuongororwa.',
+                              'Dala umbiko weWord kumbe PDF ngemva kokuhlolwa.',
+                              'Konza report yaWord na PDF mwamana scan.',
+                            ),
+                            onTap: _showReportInfo,
                           ),
                         ],
                       ),
@@ -222,10 +455,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontFamily: 'Georgia',
+        fontSize: 25,
+        fontWeight: FontWeight.w800,
+        color: Palette.primaryDark,
+      ),
+    );
+  }
+
   Widget _header() {
     return Row(
       children: [
-        const Expanded(child: CropMedicBrand(compact: true, showTagline: false)),
+        const Expanded(
+          child: CropMedicBrand(compact: true, showTagline: false),
+        ),
         const SizedBox(width: 8),
         LanguagePill(
           value: _lang,
@@ -239,11 +486,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _hero() {
-    const imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85';
+    const imageUrl =
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85';
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: SizedBox(
-        height: _heroHeight,
+        height: _lang == 'en' ? 245 : 282,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -253,13 +501,19 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.centerRight,
               errorBuilder: (_, __, ___) => Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFFE9F2DF), Color(0xFFF7E6B8)]),
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFE9F2DF), Color(0xFFF7E6B8)],
+                  ),
                 ),
                 child: const Align(
                   alignment: Alignment.centerRight,
                   child: Padding(
                     padding: EdgeInsets.all(20),
-                    child: Icon(Icons.eco_rounded, size: 145, color: Color(0x664B8A56)),
+                    child: Icon(
+                      Icons.eco_rounded,
+                      size: 145,
+                      color: Color(0x664B8A56),
+                    ),
                   ),
                 ),
               ),
@@ -270,7 +524,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   stops: [0, .62, 1],
-                  colors: [Color(0xFFF8F8F2), Color(0xF2F4F5E9), Color(0x22FFFFFF)],
+                  colors: [
+                    Color(0xFFF8F8F2),
+                    Color(0xF2F4F5E9),
+                    Color(0x22FFFFFF),
+                  ],
                 ),
               ),
             ),
@@ -291,7 +549,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontFamily: 'Georgia',
                           color: Palette.primaryDark,
-                          fontSize: _heroTitleSize,
+                          fontSize: _lang == 'en' ? 31 : 26,
                           height: 1.02,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -.8,
@@ -344,16 +602,38 @@ class _HomeScreenState extends State<HomeScreen> {
       decoration: const BoxDecoration(
         color: Palette.surface,
         border: Border(top: BorderSide(color: Palette.border)),
-        boxShadow: [BoxShadow(color: Color(0x10000000), blurRadius: 14, offset: Offset(0, -4))],
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 14,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.fromLTRB(2, 5, 2, 7),
       child: Row(
         children: [
           _NavItem(icon: Icons.home_rounded, label: tr('home'), active: true),
-          _NavItem(icon: Icons.camera_alt_outlined, label: tr('scan'), onTap: _openScan),
-          _NavItem(icon: Icons.menu_book_outlined, label: ui('Library', 'Raibhurari', 'Umtapo', 'Layiburari'), onTap: _openLibrary),
-          _NavItem(icon: Icons.cloud_outlined, label: ui('Weather', 'Mamiriro', 'Isimo', 'Mvula'), onTap: _openWeather),
-          _NavItem(icon: Icons.support_agent_outlined, label: tr('help'), onTap: _openHelp),
+          _NavItem(
+            icon: Icons.camera_alt_outlined,
+            label: tr('scan'),
+            onTap: _openScan,
+          ),
+          _NavItem(
+            icon: Icons.menu_book_outlined,
+            label: ui('Library', 'Raibhurari', 'Umtapo', 'Layiburari'),
+            onTap: _openLibrary,
+          ),
+          _NavItem(
+            icon: Icons.cloud_outlined,
+            label: ui('Weather', 'Mamiriro', 'Isimo', 'Mvula'),
+            onTap: _openWeather,
+          ),
+          _NavItem(
+            icon: Icons.support_agent_outlined,
+            label: tr('help'),
+            onTap: _openHelp,
+          ),
         ],
       ),
     );
@@ -366,7 +646,12 @@ class _BigAction extends StatelessWidget {
   final bool primary;
   final VoidCallback? onTap;
 
-  const _BigAction({required this.icon, required this.title, required this.onTap, this.primary = false});
+  const _BigAction({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.primary = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -375,42 +660,42 @@ class _BigAction extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
-          child: Ink(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: primary ? brandGradient : null,
-              color: primary ? null : Palette.surface,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: primary ? Palette.primaryDark : Palette.primary, width: primary ? 0 : 1.25),
-              boxShadow: primary
-                  ? const [BoxShadow(color: Color(0x25126044), blurRadius: 20, offset: Offset(0, 8))]
-                  : null,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: primary ? brandGradient : null,
+            color: primary ? null : Palette.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: primary ? Palette.primaryDark : Palette.primary,
+              width: primary ? 0 : 1.25,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: primary ? Colors.white : Palette.primaryDark, size: 26),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: 'Georgia',
-                      color: primary ? Colors.white : Palette.primaryDark,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w700,
-                    ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: primary ? Colors.white : Palette.primaryDark,
+                size: 26,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    color: primary ? Colors.white : Palette.primaryDark,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Icon(Icons.chevron_right_rounded, color: primary ? Colors.white : Palette.primaryDark, size: 27),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: primary ? Colors.white : Palette.primaryDark,
+                size: 27,
+              ),
+            ],
           ),
         ),
       ),
@@ -424,38 +709,131 @@ class _ToolCard extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const _ToolCard({required this.icon, required this.title, required this.text, required this.onTap});
+  const _ToolCard({
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: AppCard(
-        padding: const EdgeInsets.all(14),
-        radius: 22,
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(color: Palette.primarySoft, borderRadius: BorderRadius.circular(17)),
-              child: Icon(icon, color: Palette.primary, size: 28),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Palette.primaryDark)),
-                  const SizedBox(height: 3),
-                  Text(text, style: const TextStyle(color: Palette.textDim, fontSize: 12.5, height: 1.3)),
-                ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: AppCard(
+          padding: const EdgeInsets.all(14),
+          radius: 22,
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Palette.primarySoft,
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: Icon(icon, color: Palette.primary, size: 28),
               ),
-            ),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right_rounded, color: Palette.primary),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: Palette.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Palette.textDim,
+                        fontSize: 12.5,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right_rounded, color: Palette.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final String text;
+  final VoidCallback onTap;
+
+  const _ReportCard({
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: AppCard(
+          color: const Color(0xFFF2F6EE),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                backgroundColor: Palette.primarySoft,
+                child: Icon(Icons.description_rounded, color: Palette.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Palette.textDim,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tap to learn how',
+                      style: TextStyle(
+                        color: Palette.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: Palette.primary),
+            ],
+          ),
         ),
       ),
     );
@@ -465,6 +843,7 @@ class _ToolCard extends StatelessWidget {
 class _CropMini extends StatelessWidget {
   final String emoji;
   final String label;
+
   const _CropMini({required this.emoji, required this.label});
 
   @override
@@ -474,7 +853,10 @@ class _CropMini extends StatelessWidget {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 24)),
         const SizedBox(height: 3),
-        Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
@@ -485,34 +867,86 @@ class _StepCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String text;
+  final VoidCallback onTap;
 
-  const _StepCard({required this.number, required this.icon, required this.title, required this.text});
+  const _StepCard({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 132),
-      padding: const EdgeInsets.fromLTRB(8, 10, 8, 12),
-      decoration: BoxDecoration(color: const Color(0xFFF2F6EE), borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          constraints: const BoxConstraints(minHeight: 150),
+          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF2F6EE),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Palette.border),
+          ),
+          child: Column(
             children: [
-              CircleAvatar(
-                radius: 10.5,
-                backgroundColor: Palette.gold,
-                child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 10.5,
+                    backgroundColor: Palette.gold,
+                    child: Text(
+                      number,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(icon, color: Palette.primary, size: 23),
+                ],
               ),
-              const SizedBox(width: 6),
-              Icon(icon, color: Palette.primary, size: 23),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: 'Georgia',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                  height: 1.15,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Palette.textDim,
+                  fontSize: 10,
+                  height: 1.22,
+                ),
+              ),
+              const Spacer(),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: Palette.primary,
+                size: 17,
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700, fontSize: 12.5, height: 1.15)),
-          const SizedBox(height: 5),
-          Text(text, textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Palette.textDim, fontSize: 10, height: 1.22)),
-        ],
+        ),
       ),
     );
   }
@@ -524,7 +958,12 @@ class _NavItem extends StatelessWidget {
   final bool active;
   final VoidCallback? onTap;
 
-  const _NavItem({required this.icon, required this.label, this.active = false, this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.active = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -544,7 +983,11 @@ class _NavItem extends StatelessWidget {
                   color: active ? Palette.primarySoft : Colors.transparent,
                   borderRadius: BorderRadius.circular(99),
                 ),
-                child: Icon(icon, color: active ? Palette.primaryDark : Palette.textDim, size: 20),
+                child: Icon(
+                  icon,
+                  color: active ? Palette.primaryDark : Palette.textDim,
+                  size: 20,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
