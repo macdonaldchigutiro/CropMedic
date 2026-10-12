@@ -16,9 +16,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image
 
+from model_registry import CropModelRegistry
+
 BASE = Path(__file__).parent
 MODEL_PATH = BASE / "model" / "model.keras"
 CLASSES_PATH = BASE / "model" / "class_names.json"
+OPTIONAL_MODELS_ROOT = BASE / "models"
 ADVICE = json.loads((BASE / "advice.json").read_text(encoding="utf-8"))
 
 IMG_SIZE = 224
@@ -29,7 +32,7 @@ CROP_MIN_MARGIN = 0.10
 TOP_K = 3
 SUPPORTED_LANGS = {"en", "sn", "nd", "toi"}
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
-SUPPORTED_CROPS = ("Maize", "Tomato", "Potato", "Bell pepper")
+LEGACY_SUPPORTED_CROPS = ("Maize", "Tomato", "Potato", "Bell pepper")
 
 APP_ENV = os.getenv("CROPMEDIC_ENV", "development").strip().lower()
 IS_PRODUCTION = APP_ENV == "production"
@@ -133,12 +136,13 @@ async def security_middleware(request: Request, call_next):
 
 
 model = None
-class_names = []
+class_names: list[str] = []
 model_error = None
+crop_registry = CropModelRegistry(OPTIONAL_MODELS_ROOT)
 
 
 def load_model():
-    """Load and validate the diagnosis model without ever enabling fake predictions."""
+    """Load and validate the legacy four-crop diagnosis model."""
     global model, class_names, model_error
 
     model = None
@@ -146,8 +150,8 @@ def load_model():
     model_error = None
 
     if not MODEL_PATH.exists() or not CLASSES_PATH.exists():
-        model_error = "Trained model files are not installed."
-        print(f"Crop Medic model unavailable: {model_error}")
+        model_error = "Trained legacy model files are not installed."
+        print(f"Crop Medic legacy model unavailable: {model_error}")
         return
 
     try:
@@ -169,15 +173,26 @@ def load_model():
 
         model = loaded_model
         class_names = loaded_classes
-        print(f"Crop Medic model loaded with {len(class_names)} classes")
+        print(f"Crop Medic legacy model loaded with {len(class_names)} classes")
     except Exception as exc:
         model = None
         class_names = []
         model_error = f"Model failed validation: {exc}"
-        print(f"Crop Medic model unavailable: {model_error}")
+        print(f"Crop Medic legacy model unavailable: {model_error}")
+
+
+def load_optional_models():
+    try:
+        crop_registry.load()
+        ready = crop_registry.ready_crops()
+        if ready:
+            print("Crop-specific diagnosis models loaded: " + ", ".join(ready))
+    except Exception as exc:
+        print(f"Crop-specific model registry unavailable: {exc}")
 
 
 load_model()
+load_optional_models()
 
 
 def split_label(raw: str):
@@ -198,8 +213,26 @@ def normalize_crop_name(raw: str) -> str:
         "pepper, bell": "Bell pepper",
         "bell pepper": "Bell pepper",
         "pepper": "Bell pepper",
+        "beans": "Common bean",
+        "bean": "Common bean",
+        "common bean": "Common bean",
+        "soybean": "Soybean",
+        "soya bean": "Soybean",
+        "wheat": "Wheat",
+        "sorghum": "Sorghum",
+        "tobacco": "Tobacco",
     }
     return aliases.get(value, raw.replace("_", " ").strip())
+
+
+def _diagnosis_supported_crops() -> list[str]:
+    return list(dict.fromkeys([*LEGACY_SUPPORTED_CROPS, *crop_registry.ready_crops()]))
+
+
+def _disease_display(raw: str) -> str:
+    if "___" in raw:
+        return split_label(raw)[1]
+    return raw.replace("_", " ").strip()
 
 
 def get_advice(raw: str, lang: str):
@@ -210,13 +243,13 @@ def get_advice(raw: str, lang: str):
     return entry.get(lang) or entry["en"]
 
 
-def ensure_model_ready():
+def ensure_legacy_model_ready():
     if model is None or not class_names:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Crop Medic diagnosis is temporarily unavailable because a trained "
-                "model is not loaded. No diagnosis has been generated."
+                "Crop Medic crop identification is temporarily unavailable because "
+                "the legacy diagnosis model is not loaded."
             ),
         )
 
@@ -268,19 +301,19 @@ async def _read_upload(file: UploadFile) -> bytes:
     return image_bytes
 
 
-def _model_probabilities(image_bytes: bytes) -> np.ndarray:
+def _model_probabilities(image_bytes: bytes, model_obj, model_classes: list[str]) -> np.ndarray:
     img = _decode_and_validate_image(image_bytes).resize((IMG_SIZE, IMG_SIZE))
     arr = np.expand_dims(np.array(img, dtype=np.float32), axis=0)
 
     try:
-        probs = np.asarray(model.predict(arr, verbose=0)[0], dtype=np.float32)
+        probs = np.asarray(model_obj.predict(arr, verbose=0)[0], dtype=np.float32)
     except Exception as exc:
         raise HTTPException(
             status_code=503,
             detail="The diagnosis model could not analyse this image. Try again shortly.",
         ) from exc
 
-    if probs.ndim != 1 or len(probs) != len(class_names) or not np.all(np.isfinite(probs)):
+    if probs.ndim != 1 or len(probs) != len(model_classes) or not np.all(np.isfinite(probs)):
         raise HTTPException(
             status_code=503,
             detail="The diagnosis model returned an invalid result. No diagnosis was generated.",
@@ -299,16 +332,32 @@ def _indices_for_crop(crop: str) -> list[int]:
 
 @app.get("/api/health")
 def health():
-    ready = model is not None and bool(class_names)
+    legacy_ready = model is not None and bool(class_names)
+    optional_ready = crop_registry.ready_crops()
+    any_ready = legacy_ready or bool(optional_ready)
     payload = {
-        "status": "ready" if ready else "unavailable",
-        "model_loaded": ready,
+        "status": "ready" if any_ready else "unavailable",
+        "model_loaded": legacy_ready,
+        "legacy_model_loaded": legacy_ready,
         "class_count": len(class_names),
-        "supported_crops": list(SUPPORTED_CROPS),
+        "supported_crops": _diagnosis_supported_crops(),
+        "crop_identification_supported_crops": list(LEGACY_SUPPORTED_CROPS),
+        "crop_specific_models": crop_registry.status(),
     }
     if not IS_PRODUCTION:
         payload["model_error"] = model_error
     return payload
+
+
+@app.get("/api/capabilities")
+def capabilities():
+    return {
+        "diagnosis_supported_crops": _diagnosis_supported_crops(),
+        "crop_identification_supported_crops": list(LEGACY_SUPPORTED_CROPS),
+        "crop_identification_mode": "bootstrap_legacy_model_requires_farmer_confirmation",
+        "crop_specific_models": crop_registry.status(),
+        "languages": sorted(SUPPORTED_LANGS),
+    }
 
 
 @app.post("/api/identify-crop")
@@ -316,14 +365,14 @@ async def identify_crop(file: UploadFile = File(...)):
     """
     Bootstrap crop identification using the current four-crop disease model.
 
-    This is deliberately presented to the client as a suggestion that the farmer must
-    confirm. It is not a standalone field-validated crop-recognition model yet.
+    This remains a suggestion that the farmer must confirm. Crop-specific
+    disease models do not automatically become crop-identification models.
     """
-    ensure_model_ready()
+    ensure_legacy_model_ready()
     image_bytes = await _read_upload(file)
-    probs = _model_probabilities(image_bytes)
+    probs = _model_probabilities(image_bytes, model, class_names)
 
-    raw_scores = {crop: 0.0 for crop in SUPPORTED_CROPS}
+    raw_scores = {crop: 0.0 for crop in LEGACY_SUPPORTED_CROPS}
     for idx, raw in enumerate(class_names):
         crop = normalize_crop_name(split_label(raw)[0])
         if crop in raw_scores:
@@ -351,27 +400,86 @@ async def identify_crop(file: UploadFile = File(...)):
         if accepted
         else "CropMedic is not confident which supported crop this is. Please choose the crop before diagnosis.",
         "candidates": candidates,
-        "supported_crops": list(SUPPORTED_CROPS),
+        "supported_crops": list(LEGACY_SUPPORTED_CROPS),
         "bootstrap": True,
+    }
+
+
+def _optional_crop_prediction(image_bytes: bytes, crop: str, lang: str, entry):
+    probs = _model_probabilities(image_bytes, entry.model, entry.class_names or [])
+    order = [int(i) for i in np.argsort(probs)[::-1]]
+    top = order[: min(TOP_K, len(order))]
+    confidences = [float(probs[i]) for i in top]
+
+    predictions = [
+        {
+            "crop": crop,
+            "disease": _disease_display((entry.class_names or [])[idx]),
+            "confidence": round(confidence, 3),
+        }
+        for idx, confidence in zip(top, confidences)
+    ]
+
+    confidence = confidences[0]
+    second = confidences[1] if len(confidences) > 1 else 0.0
+    margin = confidence - second
+    accepted = (
+        confidence >= entry.confidence_threshold
+        and margin >= entry.margin_threshold
+    )
+
+    if not accepted:
+        return {
+            "accepted": False,
+            "crop": crop,
+            "disease": "",
+            "confidence": round(confidence, 3),
+            "low_confidence": True,
+            "message": (
+                f"CropMedic could not make a reliable diagnosis from this {crop} image. "
+                "Use a clear photo of the affected plant part in good light and try again."
+            ),
+            "advice": [],
+            "top_predictions": predictions,
+            "demo": False,
+        }
+
+    raw = (entry.class_names or [])[top[0]]
+    return {
+        "accepted": True,
+        "crop": crop,
+        "disease": _disease_display(raw),
+        "confidence": round(confidence, 3),
+        "low_confidence": False,
+        "message": None,
+        "advice": get_advice(raw, lang),
+        "top_predictions": predictions,
+        "demo": False,
     }
 
 
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...), lang: str = "en", crop: str | None = None):
-    ensure_model_ready()
-
     lang = lang.lower().strip()
     if lang not in SUPPORTED_LANGS:
         lang = "en"
 
     image_bytes = await _read_upload(file)
-    probs = _model_probabilities(image_bytes)
 
     if crop:
         canonical_crop = normalize_crop_name(crop)
-        selected_indices = _indices_for_crop(canonical_crop)
-        if canonical_crop not in SUPPORTED_CROPS or not selected_indices:
+        optional_entry = crop_registry.get(canonical_crop)
+        if optional_entry is not None:
+            return _optional_crop_prediction(image_bytes, canonical_crop, lang, optional_entry)
+
+        if canonical_crop not in LEGACY_SUPPORTED_CROPS:
             raise HTTPException(status_code=400, detail="That crop is not yet supported for AI diagnosis.")
+
+        ensure_legacy_model_ready()
+        probs = _model_probabilities(image_bytes, model, class_names)
+        selected_indices = _indices_for_crop(canonical_crop)
+        if not selected_indices:
+            raise HTTPException(status_code=503, detail="The installed model has no classes for that crop.")
 
         selected_probs = np.asarray([float(probs[idx]) for idx in selected_indices], dtype=np.float32)
         crop_mass = float(np.sum(selected_probs))
@@ -384,6 +492,8 @@ async def predict(file: UploadFile = File(...), lang: str = "en", crop: str | No
         confidence_values = [float(conditional[int(i)]) for i in local_order]
         crop_match_score = float(np.max(selected_probs))
     else:
+        ensure_legacy_model_ready()
+        probs = _model_probabilities(image_bytes, model, class_names)
         ordered_indices = [int(i) for i in np.argsort(probs)[::-1]]
         confidence_values = [float(probs[i]) for i in ordered_indices]
         crop_match_score = confidence_values[0]
