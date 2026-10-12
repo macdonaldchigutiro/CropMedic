@@ -3,3 +3,4 @@ numpy
 pillow
 huggingface-hub>=0.34.0
 importlib-resources
+tensorflow-datasets>=4.9.0
