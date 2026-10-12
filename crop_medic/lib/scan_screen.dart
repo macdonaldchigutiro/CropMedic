@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'brand.dart';
+import 'crop_catalog.dart';
 import 'diagnosis_flow.dart';
 import 'localization.dart';
 import 'theme.dart';
 
 class ScanScreen extends StatefulWidget {
   final String lang;
-  const ScanScreen({super.key, required this.lang});
+  final String? presetCrop;
+
+  const ScanScreen({
+    super.key,
+    required this.lang,
+    this.presetCrop,
+  });
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
@@ -20,6 +27,15 @@ class _ScanScreenState extends State<ScanScreen> {
   late String _lang;
 
   String tr(String key) => AppText.t(_lang, key);
+
+  String ui(String en, String sn, String nd, String toi) {
+    switch (_lang) {
+      case 'sn': return sn;
+      case 'nd': return nd;
+      case 'toi': return toi;
+      default: return en;
+    }
+  }
 
   @override
   void initState() {
@@ -37,17 +53,17 @@ class _ScanScreenState extends State<ScanScreen> {
     if (picked == null || !mounted) return;
     final bytes = await picked.readAsBytes();
     setState(() => _busy = true);
-    await startDiagnosisFlow(context, bytes, _lang);
+    await startDiagnosisFlow(
+      context,
+      bytes,
+      _lang,
+      presetCrop: widget.presetCrop,
+    );
     if (mounted) setState(() => _busy = false);
   }
 
   Future<void> _capture() async {
     if (_busy) return;
-
-    // image_picker_for_web maps ImageSource.camera to the browser's
-    // HTML capture hint where supported. On mobile Safari/Chrome this can
-    // open the device camera directly; desktop browsers may fall back to
-    // the normal file chooser.
     try {
       await _pick(ImageSource.camera);
     } catch (_) {
@@ -166,6 +182,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) {
     const imageUrl =
         'https://images.unsplash.com/photo-1762610744861-493bc400e80f?auto=format&fit=crop&w=1200&q=85';
+    final selectedCrop = widget.presetCrop == null ? null : cropById(widget.presetCrop!);
 
     return Scaffold(
       body: AppBackground(
@@ -192,30 +209,52 @@ class _ScanScreenState extends State<ScanScreen> {
                           value: _lang,
                           enabled: !_busy,
                           onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _lang = value);
-                            }
+                            if (value != null) setState(() => _lang = value);
                           },
                         ),
                       ],
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      tr('scanTitle'),
+                      widget.presetCrop == null
+                          ? ui('Scan the affected plant', 'Skena chikamu chakabatwa', 'Skena ingxenye ethintekileyo', 'Skena cibeela cajatwa')
+                          : ui('Scan ${selectedCrop?.label(_lang) ?? widget.presetCrop}', 'Skena ${selectedCrop?.label(_lang) ?? widget.presetCrop}', 'Skena ${selectedCrop?.label(_lang) ?? widget.presetCrop}', 'Skena ${selectedCrop?.label(_lang) ?? widget.presetCrop}'),
                       style: const TextStyle(
                         fontFamily: 'Georgia',
-                        fontSize: 40,
+                        fontSize: 38,
                         height: 1.0,
                         fontWeight: FontWeight.w700,
                         color: Palette.primaryDark,
-                        letterSpacing: -1.2,
+                        letterSpacing: -1.1,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      tr('placeLeaf'),
-                      style: const TextStyle(color: Palette.textDim, fontSize: 16.5),
+                      ui(
+                        'Photograph the clearest affected area. CropMedic can estimate the crop first, then asks you to confirm it.',
+                        'Tora mufananidzo wakajeka wechikamu chakabatwa. CropMedic inogona kutanga yafungidzira chirimwa yobva yakukumbira kusimbisa.',
+                        'Thatha umfanekiso ocacileyo wengxenye ethintekileyo. CropMedic ingaqala iqagele isilimo bese ikucela usiqinisekise.',
+                        'Tola foto icena yacibeela cajatwa. CropMedic ilabona mulimo kutanga akubuzya kusinizya.',
+                      ),
+                      style: const TextStyle(color: Palette.textDim, fontSize: 15.5, height: 1.4),
                     ),
+                    if (selectedCrop != null) ...[
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Chip(
+                          avatar: Text(selectedCrop.emoji),
+                          label: Text(
+                            ui(
+                              'Selected crop: ${selectedCrop.label(_lang)}',
+                              'Chirimwa chasarudzwa: ${selectedCrop.label(_lang)}',
+                              'Isilimo esikhethiweyo: ${selectedCrop.label(_lang)}',
+                              'Mulimo wasalilwe: ${selectedCrop.label(_lang)}',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     AspectRatio(
                       aspectRatio: 0.92,
@@ -254,13 +293,13 @@ class _ScanScreenState extends State<ScanScreen> {
                       children: [
                         Expanded(
                           child: _Tip(
-                            icon: Icons.eco_rounded,
-                            title: tr('wholeLeaf'),
-                            subtitle: tr('showWholeLeaf'),
+                            icon: Icons.center_focus_strong_rounded,
+                            title: ui('Affected area', 'Chikamu chakabatwa', 'Indawo ethintekileyo', 'Cibeela cajatwa'),
+                            subtitle: ui('Keep it visible', 'Chionekwe', 'Sibonakale', 'Ciboneke'),
                             onTap: () => _showTip(
-                              tr('wholeLeaf'),
-                              tr('tipWholeBody'),
-                              Icons.eco_rounded,
+                              ui('Show the affected area', 'Ratidza chikamu chakabatwa', 'Khombisa indawo ethintekileyo', 'Tondezya cibeela cajatwa'),
+                              ui('Include enough healthy tissue around the damage so CropMedic can compare patterns.', 'Sanganisira chikamu chine hutano chiri pedyo kuti CropMedic ienzezane nemaitiro.', 'Faka lengxenye ephilileyo eduze ukuze CropMedic iqathanise amaphetheni.', 'Tondezya acibeela cipona afwi kuti CropMedic iyeezanisye.'),
+                              Icons.center_focus_strong_rounded,
                             ),
                           ),
                         ),
@@ -270,23 +309,19 @@ class _ScanScreenState extends State<ScanScreen> {
                             icon: Icons.wb_sunny_outlined,
                             title: tr('goodLight'),
                             subtitle: tr('useDaylight'),
-                            onTap: () => _showTip(
-                              tr('goodLight'),
-                              tr('tipLightBody'),
-                              Icons.wb_sunny_outlined,
-                            ),
+                            onTap: () => _showTip(tr('goodLight'), tr('tipLightBody'), Icons.wb_sunny_outlined),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: _Tip(
-                            icon: Icons.center_focus_strong_rounded,
-                            title: tr('clearFocus'),
-                            subtitle: tr('keepSharp'),
+                            icon: Icons.photo_camera_back_rounded,
+                            title: ui('One subject', 'Chinhu chimwe', 'Into eyodwa', 'Cintu comwe'),
+                            subtitle: ui('Avoid clutter', 'Bvisa zvakawanda', 'Gwema ukuxokozela', 'Tandika bintu'),
                             onTap: () => _showTip(
-                              tr('clearFocus'),
-                              tr('tipFocusBody'),
-                              Icons.center_focus_strong_rounded,
+                              ui('Keep one crop prominent', 'Isa chirimwa chimwe pachena', 'Gcina isilimo esisodwa sicacile', 'Mulimo omwe ube acena'),
+                              ui('Avoid hands, tools, people and busy backgrounds covering the crop.', 'Usavhare chirimwa nemaoko, maturusi, vanhu kana zvinhu zvakawanda kumashure.', 'Gwema izandla, amathuluzi, abantu lezizinda ezixokozelayo zivala isilimo.', 'Tandika maanza, zyakubelensya, bantu azintu zyinji kumbele.'),
+                              Icons.photo_camera_back_rounded,
                             ),
                           ),
                         ),
@@ -324,16 +359,9 @@ class _ScanScreenState extends State<ScanScreen> {
                               child: _busy
                                   ? const Padding(
                                       padding: EdgeInsets.all(27),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: Colors.white,
-                                      ),
+                                      child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
                                     )
-                                  : const Icon(
-                                      Icons.camera_alt_rounded,
-                                      color: Colors.white,
-                                      size: 38,
-                                    ),
+                                  : const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 38),
                             ),
                           ),
                         ),
@@ -361,12 +389,7 @@ class _Tip extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  const _Tip({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  const _Tip({required this.icon, required this.title, required this.subtitle, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -377,35 +400,14 @@ class _Tip extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Ink(
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 7),
-          decoration: BoxDecoration(
-            color: Palette.surfaceSoft,
-            borderRadius: BorderRadius.circular(20),
-          ),
+          decoration: BoxDecoration(color: Palette.surfaceSoft, borderRadius: BorderRadius.circular(20)),
           child: Column(
             children: [
-              Icon(
-                icon,
-                color: icon == Icons.wb_sunny_outlined ? Palette.gold : Palette.primary,
-                size: 27,
-              ),
+              Icon(icon, color: icon == Icons.wb_sunny_outlined ? Palette.gold : Palette.primary, size: 27),
               const SizedBox(height: 7),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: const TextStyle(
-                  fontFamily: 'Georgia',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
+              Text(title, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700, fontSize: 13)),
               const SizedBox(height: 2),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                style: const TextStyle(color: Palette.textDim, fontSize: 10.5),
-              ),
+              Text(subtitle, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Palette.textDim, fontSize: 10.5)),
               const SizedBox(height: 3),
               const Icon(Icons.info_outline_rounded, size: 14, color: Palette.textDim),
             ],
@@ -443,12 +445,7 @@ class _RoundAction extends StatelessWidget {
           const SizedBox(height: 6),
           SizedBox(
             width: 78,
-            child: Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              style: const TextStyle(color: Palette.textDim, fontSize: 12),
-            ),
+            child: Text(label, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(color: Palette.textDim, fontSize: 12)),
           ),
         ],
       ),
