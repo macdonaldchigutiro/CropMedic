@@ -19,6 +19,13 @@ crop_medic_backend/training/crop_identifier_data/
 crop_medic_backend/training/artifacts/
 crop_medic_backend/training/artifacts_batch1/
 crop_medic_backend/backend/model/
+# Crop-specific binary artifacts are installed locally after validation; keep
+# backend/models/registry.json tracked but never commit the generated subfolders.
+crop_medic_backend/backend/models/*/
+
+# Portable/generated release bundles
+release/
+*.release.zip
 
 # Flutter / Dart
 .dart_tool/
