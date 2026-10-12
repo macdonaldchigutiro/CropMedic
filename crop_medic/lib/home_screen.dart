@@ -77,51 +77,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showResultInfo() async {
-    await _showFeatureSheet(
+    await _showInfoSheet(
       icon: Icons.fact_check_rounded,
       title: ui(
-        'What happens after a scan?',
-        'Chii chinoitika mushure mescan?',
-        'Kwenzakalani ngemva kwescan?',
-        'Ncinzi cicitika mwamana kuscan?',
+        'Check your result',
+        'Tarisa mhedzisiro',
+        'Hlola impumela',
+        'Langa mbuyanda',
       ),
-      text: ui(
-        'CropMedic shows the crop, the most likely condition, confidence, other possibilities and practical next steps. Results only appear after you scan or upload a leaf photo.',
-        'CropMedic inoratidza chirimwa, chirwere chingangove chiripo, chivimbo, zvimwe zvingangove uye zvekuita zvinotevera. Mhedzisiro inoonekwa mushure mekuskena kana kuisa mufananidzo weshizha.',
-        'CropMedic ikhombisa isilimo, isifo esingaba khona, ukuthembeka, okunye okungenzeka kanye lezinyathelo ezilandelayo. Impumela ivela ngemva kokuskena kumbe ukufaka umfanekiso weqabunga.',
-        'CropMedic itondeezya mulimo, bulwazi buboneka, kululama, zimbi zyobona azya kucita. Mbuyanda iboneka mwamana kuscan na kuuploada foto yashizha.',
+      message: ui(
+        'After a scan, CropMedic shows the crop, the most likely condition, confidence and practical next steps. Start with a leaf photo to see a real result.',
+        'Mushure mescan, CropMedic inoratidza chirimwa, chirwere chingangove chiripo, chivimbo uye zvekuita. Tanga nemufananidzo weshizha kuti uone mhedzisiro.',
+        'Ngemva kwescan, CropMedic ikhombisa isilimo, isifo esingaba khona, ukuthembeka kanye lezinyathelo ezilandelayo. Qala ngomfanekiso weqabunga.',
+        'Mwamana scan, CropMedic itondeezya mulimo, bulwazi buboneka, kululama azya kucita. Tanga na foto yashizha.',
       ),
       primaryLabel: tr('scanLeaf'),
-      onPrimary: _openScan,
+      primaryAction: _openScan,
       secondaryLabel: tr('uploadPhoto'),
-      onSecondary: _pickGallery,
+      secondaryAction: () {
+        _pickGallery();
+      },
     );
   }
 
   Future<void> _showGuidanceInfo() async {
-    await _showFeatureSheet(
+    await _showInfoSheet(
       icon: Icons.spa_rounded,
       title: ui(
-        'Guidance that follows a diagnosis',
-        'Mazano anotevera kuongororwa',
-        'Isiqondiso ngemva kokuhlolwa',
-        'Lugwasyo mwamana kujanwa bulwazi',
+        'Get guidance',
+        'Wana mazano',
+        'Thola isiqondiso',
+        'Jana lugwasyo',
       ),
-      text: ui(
-        'After a supported diagnosis, CropMedic gives practical next steps. You can also browse the disease library for symptoms, prevention and general guidance.',
-        'Mushure mekuongororwa kunotsigirwa, CropMedic inopa zvekuita zvinotevera. Unogonawo kuona raibhurari yezvirwere yezviratidzo, kudzivirira nemazano.',
-        'Ngemva kokuhlolwa okusekelwayo, CropMedic inika izinyathelo ezilandelayo. Ungabuye ubone umtapo wezifo wezimpawu, ukuvikela lesiqondiso.',
-        'Mwamana kujanwa bulwazi, CropMedic ilapa zyakucita. Ulamvwa kubona layiburari yabuzwayi, zibonakaliso akuzwidilila.',
+      message: ui(
+        'Guidance appears with a supported diagnosis. You can also browse the disease library for symptoms, prevention and practical first steps.',
+        'Mazano anoonekwa kana scan yawana chirwere chinotsigirwa. Unogonawo kushandisa raibhurari yezvirwere kuona zviratidzo nekudzivirira.',
+        'Isiqondiso siyavela lapho ukuhlolwa kuthola isifo esisekelwayo. Ungabuye usebenzise umtapo wezifo ukubona izimpawu lokuvikela.',
+        'Lugwasyo luboneka naa scan yajana bulwazi. Ulamvwa kusebenzisa layiburari yabuzwayi kubona zibonakaliso akuzwidilila.',
       ),
-      primaryLabel: ui('Open disease library', 'Vhura raibhurari', 'Vula umtapo', 'Jula layiburari'),
-      onPrimary: _openLibrary,
+      primaryLabel: ui(
+        'Open disease library',
+        'Vhura raibhurari',
+        'Vula umtapo',
+        'Jula layiburari',
+      ),
+      primaryAction: _openLibrary,
       secondaryLabel: tr('scanLeaf'),
-      onSecondary: _openScan,
+      secondaryAction: _openScan,
     );
   }
 
-  Future<void> _showReportInfo() async {
-    await _showFeatureSheet(
+  Future<void> _showReportsInfo() async {
+    await _showInfoSheet(
       icon: Icons.description_rounded,
       title: ui(
         'Printable reports',
@@ -129,29 +136,32 @@ class _HomeScreenState extends State<HomeScreen> {
         'Imibiko eprintwayo',
         'Ma-report aamaprinta',
       ),
-      text: ui(
-        'Reports are created from a completed diagnosis, so there is nothing to print from the home screen yet. Scan or upload a leaf first. On the result screen, tap “Create printable report” to download a PDF or Word report.',
-        'Report inogadzirwa mushure mekuongororwa, saka hapana report yekudhawunirodha pahome screen parizvino. Tanga waskena kana kuisa mufananidzo weshizha. Paresult screen, sarudza “Gadzira report inoprintwa” kuti uwane PDF kana Word.',
-        'Umbiko wenziwa ngemva kokuhlolwa, ngakho akula mbiko yokudawuniloda kuhome screen okwamanje. Qala ngokuskena kumbe ukufaka umfanekiso weqabunga. Kuresult screen khetha umbiko oprintwayo ukuze uthole PDF kumbe Word.',
-        'Report ikonziwa mwamana scan. Kunyina report yamaprinta pahome screen manje. Tanga wascan na kuuploada foto yashizha. Paresult screen salazya report yaamaprinta kuti udanilode PDF na Word.',
+      message: ui(
+        'A report is created from a completed diagnosis. Scan or upload a leaf first. On the result screen, tap “Create printable report” to download PDF or Word.',
+        'Report inogadzirwa mushure mekuongororwa. Tanga waskena kana kuisa mufananidzo weshizha. Paresult screen sarudza “Gadzira report inoprintwa” kuti uwane PDF kana Word.',
+        'Umbiko wenziwa ngemva kokuhlolwa. Qala ngokuskena kumbe ukufaka umfanekiso weqabunga. Kuresult screen khetha umbiko oprintwayo ukuze uthole PDF kumbe Word.',
+        'Report ikonziwa mwamana scan. Tanga wascan na kuuploada foto yashizha. Paresult screen salazya report yaamaprinta kuti udanilode PDF na Word.',
       ),
       primaryLabel: tr('scanLeaf'),
-      onPrimary: _openScan,
+      primaryAction: _openScan,
       secondaryLabel: tr('uploadPhoto'),
-      onSecondary: _pickGallery,
+      secondaryAction: () {
+        _pickGallery();
+      },
     );
   }
 
-  Future<void> _showFeatureSheet({
+  Future<void> _showInfoSheet({
     required IconData icon,
     required String title,
-    required String text,
+    required String message,
     required String primaryLabel,
-    required VoidCallback onPrimary,
+    required VoidCallback primaryAction,
     required String secondaryLabel,
-    required VoidCallback onSecondary,
+    required VoidCallback secondaryAction,
   }) async {
     if (!mounted) return;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -166,9 +176,9 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(28),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x24000000),
+                  color: Color(0x26000000),
                   blurRadius: 30,
-                  offset: Offset(0, -6),
+                  offset: Offset(0, -8),
                 ),
               ],
             ),
@@ -187,15 +197,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                Container(
-                  width: 58,
-                  height: 58,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Palette.primarySoft,
-                    borderRadius: BorderRadius.circular(18),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: Palette.primarySoft,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(icon, color: Palette.primary, size: 30),
                   ),
-                  child: Icon(icon, color: Palette.primary, size: 30),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -204,13 +216,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontFamily: 'Georgia',
                     color: Palette.primaryDark,
                     fontSize: 24,
-                    height: 1.12,
+                    height: 1.1,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 9),
                 Text(
-                  text,
+                  message,
                   style: const TextStyle(
                     color: Palette.textDim,
                     fontSize: 14.5,
@@ -222,8 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 52,
                   child: FilledButton.icon(
                     onPressed: () {
-                      Navigator.pop(sheetContext);
-                      onPrimary();
+                      Navigator.of(sheetContext).pop();
+                      primaryAction();
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: Palette.primary,
@@ -244,8 +256,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pop(sheetContext);
-                      onSecondary();
+                      Navigator.of(sheetContext).pop();
+                      secondaryAction();
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Palette.primaryDark,
@@ -298,7 +310,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           _BigAction(
                             icon: Icons.photo_library_rounded,
                             title: tr('uploadPhoto'),
-                            onTap: _busy ? null : _pickGallery,
+                            onTap: _busy
+                                ? null
+                                : () {
+                                    _pickGallery();
+                                  },
                           ),
                           const SizedBox(height: 13),
                           _supportedCrops(),
@@ -380,10 +396,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 6),
                           Text(
                             ui(
-                              'Tap a step to continue or learn what happens next.',
-                              'Baya padanho kuti uenderere mberi kana uzive zvinotevera.',
-                              'Cindezela inyathelo ukuze uqhubeke kumbe ufunde okulandelayo.',
-                              'Baya padanho kuti uzibe ciyobona alimwi.',
+                              'Tap any step — these cards are now interactive.',
+                              'Baya padanho — makadhi aya ava kushanda.',
+                              'Cindezela inyathelo — amakhadi la asebenza.',
+                              'Baya padanho — makadi aya alasebenza.',
                             ),
                             style: const TextStyle(
                               color: Palette.textDim,
@@ -434,12 +450,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               'Ma-report aamaprinta',
                             ),
                             text: ui(
-                              'Create a Word or PDF report after a diagnosis.',
-                              'Gadzira Word kana PDF report mushure mekuongororwa.',
-                              'Dala umbiko weWord kumbe PDF ngemva kokuhlolwa.',
-                              'Konza report yaWord na PDF mwamana scan.',
+                              'PDF and Word reports are available after a completed diagnosis.',
+                              'PDF neWord reports zvinowanikwa mushure mekuongororwa.',
+                              'Imibiko yePDF leWord itholakala ngemva kokuhlolwa.',
+                              'PDF na Word reports zilajanwa mwamana scan.',
                             ),
-                            onTap: _showReportInfo,
+                            onTap: _showReportsInfo,
                           ),
                         ],
                       ),
@@ -488,6 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _hero() {
     const imageUrl =
         'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85';
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(28),
       child: SizedBox(
@@ -818,13 +835,13 @@ class _ReportCard extends StatelessWidget {
                         height: 1.35,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 7),
                     const Text(
-                      'Tap to learn how',
+                      'Tap to continue',
                       style: TextStyle(
                         color: Palette.primary,
-                        fontWeight: FontWeight.w800,
                         fontSize: 12,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
@@ -833,6 +850,99 @@ class _ReportCard extends StatelessWidget {
               const SizedBox(width: 8),
               const Icon(Icons.chevron_right_rounded, color: Palette.primary),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepCard extends StatelessWidget {
+  final String number;
+  final IconData icon;
+  final String title;
+  final String text;
+  final VoidCallback onTap;
+
+  const _StepCard({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.text,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 156,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Ink(
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 9),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2F6EE),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Palette.border),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 10.5,
+                      backgroundColor: Palette.gold,
+                      child: Text(
+                        number,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(icon, color: Palette.primary, size: 23),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Georgia',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.5,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Expanded(
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Palette.textDim,
+                      fontSize: 10,
+                      height: 1.22,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Palette.primary,
+                  size: 17,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -858,96 +968,6 @@ class _CropMini extends StatelessWidget {
           style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
         ),
       ],
-    );
-  }
-}
-
-class _StepCard extends StatelessWidget {
-  final String number;
-  final IconData icon;
-  final String title;
-  final String text;
-  final VoidCallback onTap;
-
-  const _StepCard({
-    required this.number,
-    required this.icon,
-    required this.title,
-    required this.text,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          constraints: const BoxConstraints(minHeight: 150),
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF2F6EE),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Palette.border),
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 10.5,
-                    backgroundColor: Palette.gold,
-                    child: Text(
-                      number,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(icon, color: Palette.primary, size: 23),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Georgia',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                  height: 1.15,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Palette.textDim,
-                  fontSize: 10,
-                  height: 1.22,
-                ),
-              ),
-              const Spacer(),
-              const Icon(
-                Icons.arrow_forward_rounded,
-                color: Palette.primary,
-                size: 17,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
