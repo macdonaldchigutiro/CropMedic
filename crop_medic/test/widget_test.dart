@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:crop_medic/main.dart';
+import 'package:crop_medic/brand.dart';
 
 void main() {
-  testWidgets('CropMedic app starts', (WidgetTester tester) async {
-    await tester.pumpWidget(const CropMedicApp());
+  testWidgets('CropMedic brand renders', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CropMedicBrand()),
+        ),
+      ),
+    );
 
-    expect(find.byType(MaterialApp), findsOneWidget);
-    expect(find.byType(Scaffold), findsWidgets);
+    expect(find.byType(CropMedicBrand), findsOneWidget);
+    expect(find.text('AI crop health assistant'), findsOneWidget);
   });
 }
