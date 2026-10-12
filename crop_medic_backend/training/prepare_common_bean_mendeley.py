@@ -8,6 +8,9 @@ Primary source:
 The script first tries Mendeley's public dataset API. If automated download is
 blocked, pass a locally downloaded ZIP with --zip-path.
 
+The Mendeley browser download may itself contain another ZIP archive. This
+preparer therefore walks nested ZIP files as well as ordinary folders.
+
 Output layout:
   data_batch1/common_bean/
     Angular Leaf Spot/
@@ -23,6 +26,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import re
 import shutil
@@ -49,6 +53,7 @@ CLASS_RULES = {
     "Healthy": {"healthyleaves", "healthy", "hlt"},
 }
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_NESTED_ZIP_BYTES = 2 * 1024 * 1024 * 1024
 
 
 def parse_args():
@@ -73,7 +78,6 @@ def _classify(member_name: str) -> str | None:
         for candidate in candidates:
             if candidate in tokens:
                 return label
-        # Also accept clear descriptive folder names, but avoid one-letter noise.
         for token in tokens:
             if len(token) >= 4 and any(token in candidate for candidate in candidates):
                 return label
@@ -100,7 +104,6 @@ def _download_public_zip(target: Path) -> Path:
     if not zip_files:
         raise RuntimeError("No ZIP archive was listed by the Mendeley dataset API.")
 
-    # Prefer an archive that looks like the original/raw dataset, not derived plots.
     zip_files.sort(
         key=lambda item: (
             "original" not in str(item.get("filename", "")).lower(),
@@ -125,34 +128,87 @@ def _download_public_zip(target: Path) -> Path:
     return target
 
 
-def _stage(zip_path: Path, output_dir: Path) -> dict[str, int]:
+def _write_image(
+    archive: zipfile.ZipFile,
+    info: zipfile.ZipInfo,
+    logical_name: str,
+    output_dir: Path,
+    counts: dict[str, int],
+) -> bool:
+    suffix = Path(logical_name).suffix.lower()
+    if suffix not in IMAGE_SUFFIXES:
+        return False
+
+    label = _classify(logical_name)
+    if label is None:
+        return False
+
+    target_dir = output_dir / label
+    target_dir.mkdir(parents=True, exist_ok=True)
+    index = counts[label] + 1
+    target = target_dir / f"{_norm(label)}_{index:05d}{suffix}"
+    while target.exists():
+        index += 1
+        target = target_dir / f"{_norm(label)}_{index:05d}{suffix}"
+
+    with archive.open(info) as src, target.open("wb") as dst:
+        shutil.copyfileobj(src, dst)
+    counts[label] += 1
+    return True
+
+
+def _walk_archive(
+    archive: zipfile.ZipFile,
+    output_dir: Path,
+    counts: dict[str, int],
+    seen_names: list[str],
+    prefix: str = "",
+    depth: int = 0,
+) -> None:
+    if depth > 4:
+        return
+
+    for info in archive.infolist():
+        if info.is_dir():
+            continue
+
+        logical_name = f"{prefix}{info.filename}"
+        if len(seen_names) < 60:
+            seen_names.append(logical_name)
+
+        if _write_image(archive, info, logical_name, output_dir, counts):
+            continue
+
+        if Path(info.filename).suffix.lower() != ".zip":
+            continue
+        if info.file_size <= 0 or info.file_size > MAX_NESTED_ZIP_BYTES:
+            continue
+
+        try:
+            nested_bytes = archive.read(info)
+            with zipfile.ZipFile(io.BytesIO(nested_bytes)) as nested:
+                print(f"Opening nested ZIP: {logical_name}")
+                _walk_archive(
+                    nested,
+                    output_dir,
+                    counts,
+                    seen_names,
+                    prefix=f"{logical_name}::",
+                    depth=depth + 1,
+                )
+        except (zipfile.BadZipFile, RuntimeError, OSError) as exc:
+            print(f"Skipping unreadable nested ZIP {logical_name}: {exc}")
+
+
+def _stage(zip_path: Path, output_dir: Path) -> tuple[dict[str, int], list[str]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     counts = {name: 0 for name in CLASS_RULES}
+    seen_names: list[str] = []
 
     with zipfile.ZipFile(zip_path) as archive:
-        for info in archive.infolist():
-            if info.is_dir():
-                continue
-            suffix = Path(info.filename).suffix.lower()
-            if suffix not in IMAGE_SUFFIXES:
-                continue
-            label = _classify(info.filename)
-            if label is None:
-                continue
+        _walk_archive(archive, output_dir, counts, seen_names)
 
-            target_dir = output_dir / label
-            target_dir.mkdir(parents=True, exist_ok=True)
-            index = counts[label] + 1
-            target = target_dir / f"{_norm(label)}_{index:05d}{suffix}"
-            while target.exists():
-                index += 1
-                target = target_dir / f"{_norm(label)}_{index:05d}{suffix}"
-
-            with archive.open(info) as src, target.open("wb") as dst:
-                shutil.copyfileobj(src, dst)
-            counts[label] += 1
-
-    return counts
+    return counts, seen_names
 
 
 def main():
@@ -164,6 +220,7 @@ def main():
         zip_path = zip_path.expanduser().resolve()
         if not zip_path.exists():
             raise SystemExit(f"ZIP not found: {zip_path}")
+        print(f"Using ZIP: {zip_path}")
     else:
         temp_dir = tempfile.TemporaryDirectory(prefix="cropmedic_common_bean_")
         zip_path = Path(temp_dir.name) / "common_bean_mendeley.zip"
@@ -180,7 +237,9 @@ def main():
             ) from exc
 
     try:
-        counts = _stage(zip_path, args.output_dir)
+        counts, seen_names = _stage(zip_path, args.output_dir)
+    except zipfile.BadZipFile as exc:
+        raise SystemExit(f"The selected file is not a readable ZIP archive: {zip_path}") from exc
     finally:
         if temp_dir is not None and not args.keep_download:
             temp_dir.cleanup()
@@ -193,6 +252,14 @@ def main():
     print(f"Output: {args.output_dir.resolve()}")
 
     missing = [name for name, count in counts.items() if count == 0]
+    if total == 0:
+        print("\nNo classed images were found. First archive entries were:")
+        for name in seen_names[:40]:
+            print(f"  {name}")
+        raise SystemExit(
+            "No usable bean images were found in the selected ZIP. "
+            "Check that this is the Common Bean dataset download rather than another recent ZIP."
+        )
     if missing:
         raise SystemExit(
             "Dataset preparation was incomplete. No images were found for: "
