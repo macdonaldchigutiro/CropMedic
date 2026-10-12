@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'api.dart';
 import 'brand.dart';
 import 'crop_catalog.dart';
 import 'diagnosis_flow.dart';
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final ImagePicker _picker = ImagePicker();
   String _lang = 'en';
   bool _busy = false;
+  List<CropOption> _diagnosisCrops = supportedCrops;
 
   String tr(String key) => AppText.t(_lang, key);
 
@@ -34,6 +36,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _loadCapabilities();
+  }
+
+  Future<void> _loadCapabilities() async {
+    try {
+      final capabilities = await fetchCapabilities();
+      final options = <CropOption>[];
+      for (final id in capabilities.diagnosisSupportedCrops) {
+        final crop = cropById(id);
+        if (crop != null && !options.any((item) => item.id == crop.id)) {
+          options.add(crop);
+        }
+      }
+      if (!mounted || options.isEmpty) return;
+      setState(() => _diagnosisCrops = options);
+    } catch (_) {
+      // Keep the built-in validated crop fallback if the backend capability
+      // endpoint is temporarily unavailable.
+    }
+  }
+
   Future<void> _pickGallery({String? presetCrop}) async {
     if (_busy) return;
     final picked = await _picker.pickImage(
@@ -43,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (picked == null || !mounted) return;
     final bytes = await picked.readAsBytes();
+    if (!mounted) return;
     setState(() => _busy = true);
     await startDiagnosisFlow(
       context,
@@ -297,6 +324,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeIds = _diagnosisCrops.map((crop) => crop.id).toSet();
+    final futureCrops = allCrops.where((crop) => !activeIds.contains(crop.id)).toList();
+
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
@@ -347,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisSpacing: 10,
                             crossAxisSpacing: 10,
                             childAspectRatio: 1.8,
-                            children: supportedCrops
+                            children: _diagnosisCrops
                                 .map((crop) => _CropCard(
                                       crop: crop,
                                       lang: _lang,
@@ -371,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Wrap(
                             spacing: 7,
                             runSpacing: 7,
-                            children: roadmapCrops
+                            children: futureCrops
                                 .map((crop) => ActionChip(
                                       avatar: Text(crop.emoji),
                                       label: Text(crop.label(_lang)),
