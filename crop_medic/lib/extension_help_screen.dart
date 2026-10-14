@@ -61,16 +61,16 @@ class _ExtensionHelpScreenState extends State<ExtensionHelpScreen> {
                   const SizedBox(height: 8),
                   Text(
                     _ui(
-                      'Find agricultural extension contacts and offices. CropMedic will expand this into a verified district-by-district directory.',
-                      'Tsvaga mahofisi nevanoona nezvekurima. CropMedic ichawedzera runyorwa urwu kusvika kumatunhu nemadistrict.',
-                      'Thola amahofisi labaluleki bezolimo. CropMedic izakhulisa lolu hlu kuze kube yizigaba lezindawo.',
-                      'Jana maofesi abasikulima. CropMedic ilakonzya kuyungizya busena boonse mubusena.',
+                      'Official public contacts are marked as verified. Provincial locations are shown separately when a current direct number has not yet been confirmed.',
+                      'Macontact eruzhinji akasimbiswa anoiswa chiratidzo. Nzvimbo dzemapurovhinzi dzinoratidzwa zvakasiyana kana nhamba yazvino isati yasimbiswa.',
+                      'Ama-contact kahulumende aqinisekisiweyo amakwe. Izindawo zezigaba zikhonjiswa ngokwehlukana nxa inombolo yamanje ingakaqinisekiswa.',
+                      'Macontact a boma asinizidwe alatondezyegwa. Busena bwamacisi bulatondezyegwa naa namba tayilasinizyigwa.',
                     ),
                     style: const TextStyle(color: Palette.textDim, height: 1.4),
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _province,
+                    initialValue: _province,
                     decoration: InputDecoration(
                       labelText: _ui('Province', 'Dunhu', 'Isabelo', 'Cisi'),
                       filled: true,
@@ -118,7 +118,7 @@ class _ExtensionHelpScreenState extends State<ExtensionHelpScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                                       decoration: BoxDecoration(color: Palette.primarySoft, borderRadius: BorderRadius.circular(99)),
-                                      child: const Text('Public listing', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Palette.primaryDark)),
+                                      child: const Text('Verified public contact', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Palette.primaryDark)),
                                     ),
                                 ],
                               ),
@@ -126,6 +126,7 @@ class _ExtensionHelpScreenState extends State<ExtensionHelpScreen> {
                               _line(Icons.location_on_outlined, o.address),
                               if (o.phone != null) _line(Icons.phone_outlined, o.phone!),
                               if (o.note != null) _line(Icons.info_outline_rounded, o.note!),
+                              if (o.lastVerified != null) _line(Icons.verified_outlined, 'Last verified: ${o.lastVerified}'),
                             ],
                           ),
                         ),
@@ -136,15 +137,23 @@ class _ExtensionHelpScreenState extends State<ExtensionHelpScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Directory quality matters', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Palette.primaryDark)),
+                        Text(
+                          _ui('Directory quality matters', 'Hunhu hwerunyorwa hwakakosha', 'Ikhwalithi yohlu ibalulekile', 'Bululami bwaluzibo bulakankamana'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Palette.primaryDark),
+                        ),
                         const SizedBox(height: 7),
-                        const Text(
-                          'We will only publish phone numbers after they are checked against a current public source. Office contacts change, so CropMedic should show a “last verified” date before launch.',
-                          style: TextStyle(height: 1.4),
+                        Text(
+                          _ui(
+                            'CropMedic should never invent an extension-office number. Contacts can change, so verified entries carry a check date and unverified provincial entries do not show a phone number.',
+                            'CropMedic haifaniri kugadzira nhamba yehofisi isiri yechokwadi. Macontact anochinja, saka akasimbiswa ane zuva rekutarisa uye asina kusimbiswa haana nhamba.',
+                            'CropMedic akumelanga iqambe inombolo yehofisi. Ama-contact ayatshintsha, ngakho aqinisekisiweyo alosuku lokuhlolwa kuthi angakaqinisekiswa awanombolo.',
+                            'CropMedic tayelede kulenga namba yaboola. Macontact alacinja, nkabela asinizidwe alatondezya buzuba bwakusinizya alimwi atasinizyidwe takwe namba.',
+                          ),
+                          style: const TextStyle(height: 1.4),
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _ui('Next: district and ward extension contacts across Zimbabwe.', 'Zvinotevera: macontact emadistrict nema ward.', 'Okulandelayo: ama-contact ezigaba lama ward.', 'Cilalako: macontact amadistrict amaward.'),
+                          _ui('Next: verified district and ward extension contacts across Zimbabwe.', 'Zvinotevera: macontact akasimbiswa emadistrict nema ward.', 'Okulandelayo: ama-contact aqinisekisiweyo ezigaba lama ward.', 'Cilalako: macontact asinizidwe amadistrict amaward.'),
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                       ],
@@ -181,6 +190,7 @@ class ExtensionOffice {
   final String? phone;
   final String? note;
   final bool verified;
+  final String? lastVerified;
 
   const ExtensionOffice({
     required this.province,
@@ -189,6 +199,7 @@ class ExtensionOffice {
     this.phone,
     this.note,
     this.verified = false,
+    this.lastVerified,
   });
 }
 
@@ -208,19 +219,36 @@ const zimbabweProvinces = <String>[
 const extensionDirectory = <ExtensionOffice>[
   ExtensionOffice(
     province: 'Harare',
-    name: 'ARDAS / former AGRITEX national office',
-    address: 'Ngungunyana Building, 1 Borrowdale Road, Harare',
-    phone: '+263 242 790319',
-    note: 'National extension-services contact listed in public directories.',
+    name: 'ARDAS national office',
+    address: 'Ngungunyana Building, 1 Liberation Legacy Way, Harare',
+    phone: '+263 242 705341',
+    note: 'Agricultural and Rural Development Advisory Services contact published by the Ministry of Lands, Agriculture, Fisheries, Water and Rural Development.',
     verified: true,
+    lastVerified: '14 Oct 2026',
+  ),
+  ExtensionOffice(
+    province: 'Harare',
+    name: 'Ministry of Agriculture head office',
+    address: 'Ngungunyana Building, 1 Liberation Legacy Way, Harare',
+    phone: '+263 242 706081-9',
+    note: 'Official Ministry head-office general line.',
+    verified: true,
+    lastVerified: '14 Oct 2026',
+  ),
+  ExtensionOffice(
+    province: 'Harare',
+    name: 'Plant Protection Institute',
+    address: 'Agricultural Research Centre, 5th Street Extension, Harare',
+    phone: '+263 712 724701',
+    note: 'Public contact listed in the Ministry 2025 client charter for plant-protection support.',
+    verified: true,
+    lastVerified: '14 Oct 2026',
   ),
   ExtensionOffice(
     province: 'Bulawayo',
-    name: 'ARDAS Bulawayo',
-    address: 'Mhlahlandlela Government Complex, 10th Avenue & Basch Street, Bulawayo',
-    phone: '+263 775 813338',
-    note: 'Publicly listed extension-services office contact.',
-    verified: true,
+    name: 'Provincial agricultural services',
+    address: 'Mhlahlandlela Government Complex, Bulawayo',
+    note: 'Provincial office location retained; a current direct extension-office number still needs verification from an official source.',
   ),
   ExtensionOffice(
     province: 'Manicaland',
