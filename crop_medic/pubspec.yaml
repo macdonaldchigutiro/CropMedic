@@ -1,7 +1,7 @@
 name: crop_medic
-description: Crop Medic - AI plant health scanner.
+description: CropMedic V1 - AI crop health assistant for Maize, Tomato, Potato and Bell pepper.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

@@ -5,8 +5,9 @@ import 'api.dart';
 import 'brand.dart';
 import 'crop_catalog.dart';
 import 'diagnosis_flow.dart';
-import 'disease_library_screen.dart';
+import 'disease_library_v1_screen.dart';
 import 'extension_help_screen.dart';
+import 'history_screen.dart';
 import 'localization.dart';
 import 'scan_screen.dart';
 import 'theme.dart';
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final ImagePicker _picker = ImagePicker();
   String _lang = 'en';
   bool _busy = false;
+  bool? _serviceReachable;
   List<CropOption> _diagnosisCrops = supportedCrops;
 
   String tr(String key) => AppText.t(_lang, key);
@@ -45,18 +47,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCapabilities() async {
     try {
       final capabilities = await fetchCapabilities();
+      final releaseIds = supportedCrops.map((c) => c.id).toSet();
       final options = <CropOption>[];
       for (final id in capabilities.diagnosisSupportedCrops) {
+        if (!releaseIds.contains(id)) continue;
         final crop = cropById(id);
         if (crop != null && !options.any((item) => item.id == crop.id)) {
           options.add(crop);
         }
       }
-      if (!mounted || options.isEmpty) return;
-      setState(() => _diagnosisCrops = options);
+      if (!mounted) return;
+      setState(() {
+        _serviceReachable = true;
+        if (options.isNotEmpty) _diagnosisCrops = options;
+      });
     } catch (_) {
-      // Keep the built-in validated crop fallback if the backend capability
-      // endpoint is temporarily unavailable.
+      if (!mounted) return;
+      setState(() => _serviceReachable = false);
     }
   }
 
@@ -71,28 +78,27 @@ class _HomeScreenState extends State<HomeScreen> {
     final bytes = await picked.readAsBytes();
     if (!mounted) return;
     setState(() => _busy = true);
-    await startDiagnosisFlow(
-      context,
-      bytes,
-      _lang,
-      presetCrop: presetCrop,
-    );
+    await startDiagnosisFlow(context, bytes, _lang, presetCrop: presetCrop);
     if (mounted) setState(() => _busy = false);
   }
 
   void _openScan({String? crop}) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ScanScreen(lang: _lang, presetCrop: crop),
-      ),
+      MaterialPageRoute(builder: (_) => ScanScreen(lang: _lang, presetCrop: crop)),
     );
   }
 
   void _openLibrary({String? crop}) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DiseaseLibraryScreen(lang: _lang, initialCrop: crop),
+        builder: (_) => DiseaseLibraryV1Screen(lang: _lang, initialCrop: crop),
       ),
+    );
+  }
+
+  void _openHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => HistoryScreen(lang: _lang)),
     );
   }
 
@@ -141,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         Text(
-                          ui('AI diagnosis supported', 'AI inotsigira kuongorora', 'Ukuhlolwa nge-AI kuyasebenza', 'AI ilakuyandula'),
+                          ui('Supported in CropMedic V1', 'Inotsigirwa muCropMedic V1', 'Isekwa yiCropMedic V1', 'Ilagwasigwa muCropMedic V1'),
                           style: const TextStyle(color: Palette.primary, fontWeight: FontWeight.w800),
                         ),
                       ],
@@ -174,200 +180,53 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _showRoadmapCrop(CropOption crop) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Palette.surface,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(crop.emoji, style: const TextStyle(fontSize: 46)),
-              const SizedBox(height: 8),
-              Text(
-                crop.label(_lang),
-                style: const TextStyle(fontFamily: 'Georgia', fontSize: 27, fontWeight: FontWeight.w800, color: Palette.primaryDark),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                ui(
-                  'This crop is in the CropMedic v3 expansion roadmap. AI diagnosis is not enabled yet because we still need suitable training data and field validation.',
-                  'Chirimwa ichi chiri muhurongwa hweCropMedic v3. AI haisati yavhurwa nekuti tinoda data yekudzidzisa uye kuyedza muminda.',
-                  'Isilimo lesi sisehlelweni seCropMedic v3. Ukuhlolwa nge-AI akukavulwa ngoba kusadingeka idatha lokuhlolwa emasimini.',
-                  'Mulimo ooyu uli mulukwe lwaCropMedic v3. AI tayilavulwa nkaambo tulacida data akuyesya muminda.',
-                ),
-                style: const TextStyle(color: Palette.textDim, fontSize: 15, height: 1.45),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showResultInfo() async {
-    await _showInfoSheet(
-      icon: Icons.fact_check_rounded,
-      title: ui('Check your result', 'Tarisa mhedzisiro', 'Hlola impumela', 'Langa mbuyanda'),
-      message: ui(
-        'CropMedic identifies or confirms the crop first, then shows the most likely condition, confidence and practical next steps.',
-        'CropMedic inotanga yaziva kana kusimbisa chirimwa, yobva yaratidza chirwere chingangove chiripo, chivimbo uye zvekuita.',
-        'CropMedic iqala ngokubona kumbe ukuqinisekisa isilimo, bese ikhombisa isifo esingaba khona, ukuthembeka lezinyathelo ezilandelayo.',
-        'CropMedic itanga yaziba naa kusinizya mulimo, lyoonse itondezya bulwazi, kululama azya kucita.',
-      ),
-      primaryLabel: tr('scanLeaf'),
-      primaryAction: () => _openScan(),
-      secondaryLabel: tr('uploadPhoto'),
-      secondaryAction: () => _pickGallery(),
-    );
-  }
-
-  Future<void> _showGuidanceInfo() async {
-    await _showInfoSheet(
-      icon: Icons.spa_rounded,
-      title: ui('Get guidance', 'Wana mazano', 'Thola isiqondiso', 'Jana lugwasyo'),
-      message: ui(
-        'Guidance appears with a supported diagnosis. You can also browse the disease library for symptoms, prevention and practical first steps.',
-        'Mazano anoonekwa kana scan yawana chirwere chinotsigirwa. Unogonawo kushandisa raibhurari yezvirwere.',
-        'Isiqondiso siyavela lapho ukuhlolwa kuthola isifo esisekelwayo. Ungabuye usebenzise umtapo wezifo.',
-        'Lugwasyo luboneka naa scan yajana bulwazi. Ulamvwa kusebenzisa layiburari yabuzwayi.',
-      ),
-      primaryLabel: ui('Open disease library', 'Vhura raibhurari', 'Vula umtapo', 'Jula layiburari'),
-      primaryAction: () => _openLibrary(),
-      secondaryLabel: tr('scanLeaf'),
-      secondaryAction: () => _openScan(),
-    );
-  }
-
-  Future<void> _showReportsInfo() async {
-    await _showInfoSheet(
-      icon: Icons.description_rounded,
-      title: ui('Printable reports', 'Mareport anoprintwa', 'Imibiko eprintwayo', 'Ma-report aamaprinta'),
-      message: ui(
-        'A report is created from a completed diagnosis. Scan or upload a crop image first, then create a PDF or Word report from the result screen.',
-        'Report inogadzirwa mushure mekuongororwa. Tanga waskena kana kuisa mufananidzo, wobva wagadzira PDF kana Word paresult screen.',
-        'Umbiko wenziwa ngemva kokuhlolwa. Qala ngokuskena kumbe ukufaka umfanekiso, ubusudala iPDF kumbe iWord.',
-        'Report ikonziwa mwamana scan. Tanga wascan naa kuuploada foto, lyoonse konza PDF naa Word.',
-      ),
-      primaryLabel: tr('scanLeaf'),
-      primaryAction: () => _openScan(),
-      secondaryLabel: tr('uploadPhoto'),
-      secondaryAction: () => _pickGallery(),
-    );
-  }
-
-  Future<void> _showInfoSheet({
-    required IconData icon,
-    required String title,
-    required String message,
-    required String primaryLabel,
-    required VoidCallback primaryAction,
-    required String secondaryLabel,
-    required VoidCallback secondaryAction,
-  }) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Palette.surface,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Palette.primarySoft,
-                  child: Icon(icon, color: Palette.primary, size: 30),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(title, style: const TextStyle(fontFamily: 'Georgia', fontSize: 25, fontWeight: FontWeight.w800, color: Palette.primaryDark)),
-              const SizedBox(height: 8),
-              Text(message, style: const TextStyle(color: Palette.textDim, fontSize: 14.5, height: 1.45)),
-              const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  primaryAction();
-                },
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: Text(primaryLabel),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () {
-                  Navigator.pop(sheetContext);
-                  secondaryAction();
-                },
-                child: Text(secondaryLabel),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final activeIds = _diagnosisCrops.map((crop) => crop.id).toSet();
-    final futureCrops = allCrops.where((crop) => !activeIds.contains(crop.id)).toList();
-
     return Scaffold(
       body: AppBackground(
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
+              constraints: const BoxConstraints(maxWidth: 470),
               child: Container(
-                color: Palette.bg.withOpacity(.97),
+                color: Palette.bg.withOpacity(.98),
                 child: Column(
                   children: [
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 26),
+                        padding: const EdgeInsets.fromLTRB(18, 14, 18, 26),
                         children: [
                           _header(),
                           const SizedBox(height: 18),
                           _hero(),
                           const SizedBox(height: 14),
-                          _BigAction(
+                          _PrimaryAction(
                             icon: Icons.camera_alt_rounded,
-                            title: _busy ? tr('checkingPhoto') : ui('Scan affected crop', 'Skena chirimwa chakabatwa', 'Skena isilimo esithintekileyo', 'Skena mulimo wajatwa'),
-                            primary: true,
+                            title: _busy
+                                ? tr('checkingPhoto')
+                                : ui('Scan affected crop', 'Skena chirimwa chakabatwa', 'Skena isilimo esithintekileyo', 'Skena mulimo wajatwa'),
                             onTap: _busy ? null : () => _openScan(),
                           ),
-                          const SizedBox(height: 10),
-                          _BigAction(
-                            icon: Icons.photo_library_rounded,
-                            title: tr('uploadPhoto'),
-                            onTap: _busy ? null : () => _pickGallery(),
+                          const SizedBox(height: 9),
+                          OutlinedButton.icon(
+                            onPressed: _busy ? null : () => _pickGallery(),
+                            icon: const Icon(Icons.photo_library_rounded),
+                            label: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: Text(tr('uploadPhoto')),
+                            ),
                           ),
-                          const SizedBox(height: 22),
-                          _sectionTitle(ui('AI-supported crops', 'Zvirimwa zvinotsigirwa neAI', 'Izilimo ezisekelwa yi-AI', 'Milimo ilagwasigwa neAI')),
+                          const SizedBox(height: 24),
+                          _sectionTitle(ui('Supported crops', 'Zvirimwa zvinotsigirwa', 'Izilimo ezisekelwayo', 'Milimo ilagwasigwa')),
                           const SizedBox(height: 6),
                           Text(
                             ui(
-                              'Tap a crop to scan it directly or open its disease library.',
-                              'Baya pachirimwa kuti uchiskena kana kuvhura raibhurari yacho.',
-                              'Cindezela isilimo ukuze usiskene kumbe uvule umtapo waso.',
-                              'Baya mulimo kuti usikene naa kujula layiburari yayo.',
+                              'CropMedic V1 is deliberately focused on four crops: Maize, Tomato, Potato and Bell pepper.',
+                              'CropMedic V1 yakatarisana nezvirimwa zvina: Chibage, Madomasi, Mbatatisi neMhiripiri.',
+                              'CropMedic V1 igxile ezilimweni ezine: Umumbu, Utamatisi, Amazambane loUpelepele.',
+                              'CropMedic V1 ilagwasya milimo iine: Maize, Tomato, Potato a Bell pepper.',
                             ),
-                            style: const TextStyle(color: Palette.textDim, fontSize: 12.5),
+                            style: const TextStyle(color: Palette.textDim, fontSize: 12.8, height: 1.4),
                           ),
                           const SizedBox(height: 12),
                           GridView.count(
@@ -376,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             physics: const NeverScrollableScrollPhysics(),
                             mainAxisSpacing: 10,
                             crossAxisSpacing: 10,
-                            childAspectRatio: 1.8,
+                            childAspectRatio: 1.75,
                             children: _diagnosisCrops
                                 .map((crop) => _CropCard(
                                       crop: crop,
@@ -385,71 +244,61 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ))
                                 .toList(),
                           ),
-                          const SizedBox(height: 22),
-                          _sectionTitle(ui('More crops being added', 'Zvimwe zvirimwa zviri kuwedzerwa', 'Ezinye izilimo ziyengezwa', 'Milimo imwi ilakuboolesigwa')),
-                          const SizedBox(height: 6),
-                          Text(
-                            ui(
-                              'These are in the CropMedic v3 roadmap. They are visible now so farmers can see what is coming, but AI diagnosis stays off until each crop is trained and validated.',
-                              'Izvi zviri muhurongwa hweCropMedic v3. Zviri kuoneka kuti murimi azive zviri kuuya, asi AI ichavhurwa chete mushure mekudzidzisa nekuyedza.',
-                              'Lezi zisehlelweni seCropMedic v3. Ziyabonakala ukuze abalimi babone okuzayo, kodwa i-AI izavulwa ngemva kokuqeqetshwa lokuhlolwa.',
-                              'Eeyi ili mulukwe lwaCropMedic v3. Ilaboneka kuti mulimi azibe zilakuboola, pele AI ilavulwa mwamana kujisya akuyesya.',
-                            ),
-                            style: const TextStyle(color: Palette.textDim, fontSize: 12.5, height: 1.4),
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 7,
-                            runSpacing: 7,
-                            children: futureCrops
-                                .map((crop) => ActionChip(
-                                      avatar: Text(crop.emoji),
-                                      label: Text(crop.label(_lang)),
-                                      onPressed: () => _showRoadmapCrop(crop),
-                                    ))
-                                .toList(),
-                          ),
                           const SizedBox(height: 26),
                           _sectionTitle(ui('Farmer tools', 'Zvishandiso zvemurimi', 'Amathuluzi omlimi', 'Zyakubelensya mulimi')),
                           const SizedBox(height: 12),
                           _ToolCard(
+                            icon: Icons.history_rounded,
+                            title: ui('Saved diagnoses', 'Ongororo dzakachengetwa', 'Ukuhlolwa okulondoloziweyo', 'Buyandule bwakabikkwa'),
+                            text: ui('Review completed diagnoses and saved guidance on this device.', 'Tarisa ongororo nemazano akachengetwa pafoni iyi.', 'Bheka ukuhlolwa lesiqondiso esigcinwe kulolu cingo.', 'Langa buyandule amalayilile akabikkwa mucipangizo.'),
+                            onTap: _openHistory,
+                          ),
+                          const SizedBox(height: 10),
+                          _ToolCard(
                             icon: Icons.menu_book_rounded,
-                            title: ui('Crop disease library', 'Raibhurari yezvirwere', 'Umtapo wezifo zezilimo', 'Layiburari yabuzwayi'),
-                            text: ui('Symptoms, prevention and practical first steps.', 'Zviratidzo, kudzivirira nezvekutanga kuita.', 'Izimpawu, ukuvikela lokuqala ukukwenza.', 'Zibonakaliso, kuzwidilila azya kutanguna.'),
+                            title: ui('Disease library', 'Raibhurari yezvirwere', 'Umtapo wezifo', 'Layiburari yabuzwayi'),
+                            text: ui('Offline symptoms, prevention and practical first steps for the four supported crops.', 'Zviratidzo, kudzivirira nezvekutanga kuita pasina internet.', 'Izimpawu, ukuvikela lokuqala ukukwenza ngaphandle kwe-inthanethi.', 'Zibonakaliso, kuzwidilila azya kutanguna kucita offline.'),
                             onTap: () => _openLibrary(),
                           ),
                           const SizedBox(height: 10),
                           _ToolCard(
                             icon: Icons.cloud_rounded,
                             title: ui('Weather & crop risk', 'Mamiriro ekunze nenjodzi', 'Isimo sezulu lengozi', 'Mvula anjodzi'),
-                            text: ui('Live conditions plus simple disease and spraying alerts.', 'Mamiriro aripo pamwe neyambiro yezvirwere nekupfapfaidza.', 'Isimo samanje lezixwayiso zezifo lokufafaza.', 'Mvula lino alulayo lwabuzwayi akuspreeja.'),
+                            text: ui('Live weather plus simple crop-risk alerts.', 'Mamiriro aripo pamwe neyambiro yenjodzi.', 'Isimo samanje lezixwayiso zezingozi.', 'Mvula lino alulayo lwanjodzi.'),
                             onTap: _openWeather,
                           ),
                           const SizedBox(height: 10),
                           _ToolCard(
                             icon: Icons.support_agent_rounded,
                             title: ui('Extension services', 'Rubatsiro rwevarimisi', 'Usizo lwabalimi', 'Lugwasyo lwabalimi'),
-                            text: ui('Find agricultural offices and verified public contacts.', 'Tsvaga mahofisi nemacontact anoongororwa.', 'Thola amahofisi lama-contact aqinisekisiweyo.', 'Jana maofesi amacontact asinizidwe.'),
+                            text: ui('Find verified agricultural support contacts where available.', 'Tsvaga macontact erubatsiro rwekurima akasimbiswa.', 'Thola ama-contact osizo lwezolimo aqinisekisiweyo.', 'Jana macontact alugwasyo lwamilimo asinizidwe.'),
                             onTap: _openHelp,
                           ),
-                          const SizedBox(height: 24),
-                          _sectionTitle(tr('howItWorks')),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _StepCard(number: '1', icon: Icons.camera_alt_rounded, title: ui('Take photo', 'Tora foto', 'Thatha isithombe', 'Tola foto'), text: ui('Photograph the affected area.', 'Tora chikamu chakabatwa.', 'Thatha indawo ethintekileyo.', 'Tola cibeela cajatwa.'), onTap: () => _openScan())),
-                              const SizedBox(width: 8),
-                              Expanded(child: _StepCard(number: '2', icon: Icons.eco_rounded, title: ui('Confirm crop', 'Simbisa chirimwa', 'Qinisekisa isilimo', 'Sinizya mulimo'), text: ui('AI suggests; you confirm.', 'AI inofungidzira, iwe unosimbisa.', 'AI iyaqagela, wena uqinisekise.', 'AI ilabona, ulasinizya.'), onTap: _showResultInfo)),
-                              const SizedBox(width: 8),
-                              Expanded(child: _StepCard(number: '3', icon: Icons.fact_check_rounded, title: ui('Get diagnosis', 'Wana ongororo', 'Thola ukuhlolwa', 'Jana buyandule'), text: ui('See condition and guidance.', 'Ona chirwere nemazano.', 'Bona isifo lesiqondiso.', 'Bona bulwazi alugwasyo.'), onTap: _showGuidanceInfo)),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          _ReportCard(
-                            title: ui('Printable reports', 'Mareport anoprintwa', 'Imibiko eprintwayo', 'Ma-report aamaprinta'),
-                            text: ui('PDF and Word reports are available after a completed diagnosis.', 'PDF neWord reports zvinowanikwa mushure mekuongororwa.', 'Imibiko yePDF leWord itholakala ngemva kokuhlolwa.', 'PDF na Word reports zilajanwa mwamana scan.'),
-                            onTap: _showReportsInfo,
+                          const SizedBox(height: 22),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF5DE),
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: Palette.gold),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    ui(
+                                      'AI diagnosis needs an internet connection in V1. The disease library and saved diagnosis history remain available on the device.',
+                                      'AI diagnosis inoda internet muV1. Raibhurari yezvirwere nenhoroondo yakachengetwa zvinoramba zviripo pafoni.',
+                                      'Ukuhlolwa nge-AI kudinga i-inthanethi kuV1. Umtapo wezifo lembali yokuhlolwa kuhlala kulolu cingo.',
+                                      'AI diagnosis ilacida internet muV1. Layiburari yabuzwayi abwakabikkwa zilasala mucipangizo.',
+                                    ),
+                                    style: const TextStyle(fontSize: 12.5, height: 1.4),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -464,11 +313,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  Widget _sectionTitle(String text) => Text(
-        text,
-        style: const TextStyle(fontFamily: 'Georgia', fontSize: 25, fontWeight: FontWeight.w800, color: Palette.primaryDark),
-      );
 
   Widget _header() {
     return Row(
@@ -487,56 +331,72 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _hero() {
-    const imageUrl = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1000&q=85';
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
-      child: SizedBox(
-        height: _lang == 'en' ? 238 : 270,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              alignment: Alignment.centerRight,
-              errorBuilder: (_, __, ___) => Container(color: Palette.primarySoft),
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  stops: [0, .62, 1],
-                  colors: [Color(0xFFF8F8F2), Color(0xF2F4F5E9), Color(0x22FFFFFF)],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 18, 20),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: 255,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ui('What does your crop need today?', 'Chirimwa chako chinoda rubatsiro rwei nhasi?', 'Isilimo sakho sidinga usizo bani lamuhla?', 'Mulimo wako ulacida lugwasyo nzi sunu?'),
-                        style: TextStyle(fontFamily: 'Georgia', color: Palette.primaryDark, fontSize: _lang == 'en' ? 31 : 26, height: 1.02, fontWeight: FontWeight.w700, letterSpacing: -.8),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        ui('Photograph an affected plant. CropMedic estimates the crop, asks you to confirm it, then checks for supported diseases.', 'Tora mufananidzo wechirimwa chakabatwa. CropMedic inofungidzira chirimwa, yokukumbira kusimbisa, yobva yaongorora zvirwere zvinotsigirwa.', 'Thatha umfanekiso wesilimo esithintekileyo. CropMedic iqagela isilimo, ikucele usiqinisekise, bese ihlola izifo ezisekelwayo.', 'Tola foto yamulimo wajatwa. CropMedic ilabona mulimo, ikubuzye kusinizya, lyoonse iyandule bulwazi bulagwasigwa.'),
-                        style: const TextStyle(color: Palette.textDim, fontSize: 13.5, height: 1.35, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+    final connected = _serviceReachable;
+    final statusText = connected == null
+        ? ui('Checking AI service', 'Kutarisa AI service', 'Ukuhlola i-AI service', 'Kulanga AI service')
+        : connected
+            ? ui('AI service connected', 'AI service yakabatana', 'I-AI service ixhunyiwe', 'AI service yakamantidwe')
+            : ui('Offline mode', 'Offline mode', 'Offline mode', 'Offline mode');
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF5F8EE), Color(0xFFE2F0DA)],
         ),
+        border: Border.all(color: Palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: Palette.surface.withOpacity(.8), borderRadius: BorderRadius.circular(999)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      connected == false ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+                      size: 16,
+                      color: connected == false ? Palette.gold : Palette.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(statusText, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              const Text('🌽  🍅  🥔  🫑', style: TextStyle(fontSize: 20)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            ui('Fast crop health checks, focused on four crops.', 'Ongororo inokurumidza yezvirimwa zvina.', 'Ukuhlolwa okusheshayo kwezilimo ezine.', 'Buyandule bwamilimo iine bwakufwambaana.'),
+            style: const TextStyle(
+              fontFamily: 'Georgia',
+              fontSize: 30,
+              height: 1.02,
+              fontWeight: FontWeight.w800,
+              color: Palette.primaryDark,
+              letterSpacing: -.7,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            ui(
+              'Take a clear photo, confirm the crop, then CropMedic checks supported diseases and gives practical next steps.',
+              'Tora mufananidzo wakajeka, simbisa chirimwa, CropMedic yobva yaongorora zvirwere zvinotsigirwa nekupa mazano.',
+              'Thatha umfanekiso ocacileyo, qinisekisa isilimo, iCropMedic ihlole izifo ezisekelwayo ikunike amanyathelo alandelayo.',
+              'Tola foto icena, sinizya mulimo, CropMedic iyandule bulwazi bulagwasigwa ikupe malayilile.',
+            ),
+            style: const TextStyle(color: Palette.textDim, fontSize: 14, height: 1.4),
+          ),
+        ],
       ),
     );
   }
@@ -553,10 +413,41 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _NavItem(icon: Icons.home_rounded, label: tr('home'), active: true),
           _NavItem(icon: Icons.camera_alt_outlined, label: tr('scan'), onTap: () => _openScan()),
+          _NavItem(icon: Icons.history_rounded, label: ui('History', 'Nhoroondo', 'Imbali', 'Bwakabikkwa'), onTap: _openHistory),
           _NavItem(icon: Icons.menu_book_outlined, label: ui('Library', 'Raibhurari', 'Umtapo', 'Layiburari'), onTap: () => _openLibrary()),
-          _NavItem(icon: Icons.cloud_outlined, label: ui('Weather', 'Mamiriro', 'Isimo', 'Mvula'), onTap: _openWeather),
           _NavItem(icon: Icons.support_agent_outlined, label: tr('help'), onTap: _openHelp),
         ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String text) => Text(
+        text,
+        style: const TextStyle(fontFamily: 'Georgia', fontSize: 24, fontWeight: FontWeight.w800, color: Palette.primaryDark),
+      );
+}
+
+class _PrimaryAction extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback? onTap;
+
+  const _PrimaryAction({required this.icon, required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: FilledButton.icon(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: Palette.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        icon: Icon(icon),
+        label: Text(title, style: const TextStyle(fontFamily: 'Georgia', fontSize: 18, fontWeight: FontWeight.w800)),
       ),
     );
   }
@@ -599,43 +490,6 @@ class _CropCard extends StatelessWidget {
                 ),
               ),
               const Icon(Icons.chevron_right_rounded, color: Palette.primary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BigAction extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final bool primary;
-  final VoidCallback? onTap;
-
-  const _BigAction({required this.icon, required this.title, required this.onTap, this.primary = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: primary ? brandGradient : null,
-            color: primary ? null : Palette.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: primary ? Palette.primaryDark : Palette.primary, width: primary ? 0 : 1.25),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: primary ? Colors.white : Palette.primaryDark, size: 26),
-              const SizedBox(width: 12),
-              Expanded(child: Text(title, style: TextStyle(fontFamily: 'Georgia', color: primary ? Colors.white : Palette.primaryDark, fontSize: 18, fontWeight: FontWeight.w700))),
-              Icon(Icons.chevron_right_rounded, color: primary ? Colors.white : Palette.primaryDark, size: 27),
             ],
           ),
         ),
@@ -687,84 +541,6 @@ class _ToolCard extends StatelessWidget {
   }
 }
 
-class _ReportCard extends StatelessWidget {
-  final String title;
-  final String text;
-  final VoidCallback onTap;
-
-  const _ReportCard({required this.title, required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: AppCard(
-        color: const Color(0xFFF2F6EE),
-        child: Row(
-          children: [
-            const CircleAvatar(backgroundColor: Palette.primarySoft, child: Icon(Icons.description_rounded, color: Palette.primary)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Text(text, style: const TextStyle(color: Palette.textDim, height: 1.35)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Palette.primary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StepCard extends StatelessWidget {
-  final String number;
-  final IconData icon;
-  final String title;
-  final String text;
-  final VoidCallback onTap;
-
-  const _StepCard({required this.number, required this.icon, required this.title, required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 156,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 9),
-          decoration: BoxDecoration(color: const Color(0xFFF2F6EE), borderRadius: BorderRadius.circular(20), border: Border.all(color: Palette.border)),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(radius: 10.5, backgroundColor: Palette.gold, child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w800))),
-                  const SizedBox(width: 6),
-                  Icon(icon, color: Palette.primary, size: 23),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontFamily: 'Georgia', fontWeight: FontWeight.w700, fontSize: 12.5, height: 1.15)),
-              const SizedBox(height: 5),
-              Expanded(child: Text(text, textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Palette.textDim, fontSize: 10, height: 1.22))),
-              const Icon(Icons.arrow_forward_rounded, color: Palette.primary, size: 17),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -787,11 +563,24 @@ class _NavItem extends StatelessWidget {
               Container(
                 width: 43,
                 height: 31,
-                decoration: BoxDecoration(color: active ? Palette.primarySoft : Colors.transparent, borderRadius: BorderRadius.circular(99)),
+                decoration: BoxDecoration(
+                  color: active ? Palette.primarySoft : Colors.transparent,
+                  borderRadius: BorderRadius.circular(99),
+                ),
                 child: Icon(icon, color: active ? Palette.primaryDark : Palette.textDim, size: 20),
               ),
               const SizedBox(height: 2),
-              Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? Palette.primaryDark : Palette.textDim, fontSize: 9.5, fontWeight: active ? FontWeight.w800 : FontWeight.w500)),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: active ? Palette.primaryDark : Palette.textDim,
+                  fontSize: 9.5,
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ),

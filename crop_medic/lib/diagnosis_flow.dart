@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'crop_confirmation_screen.dart';
+import 'diagnosis_history.dart';
 import 'loading_screen.dart';
 import 'result_screen.dart';
 import 'unsupported_image_screen.dart';
@@ -54,6 +55,14 @@ Future<void> startDiagnosisFlow(
     final diagnosis = await predict(image, lang, crop: selectedCrop);
     if (!context.mounted) return;
 
+    if (diagnosis.accepted) {
+      try {
+        await DiagnosisHistoryStore.add(diagnosis, lang);
+      } catch (_) {
+        // History is a convenience feature and must never block diagnosis.
+      }
+    }
+
     final next = diagnosis.accepted
         ? ResultScreen(image: image, diagnosis: diagnosis, lang: lang)
         : UnsupportedImageScreen(
@@ -69,7 +78,13 @@ Future<void> startDiagnosisFlow(
     if (!context.mounted) return;
     if (navigator.canPop()) navigator.pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.message)),
+      SnackBar(
+        content: Text(e.message),
+        action: SnackBarAction(
+          label: 'OK',
+          onPressed: () {},
+        ),
+      ),
     );
   }
 }

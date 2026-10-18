@@ -39,7 +39,8 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.guess.accepted && widget.guess.crop.isNotEmpty) {
+    final releaseIds = supportedCrops.map((c) => c.id).toSet();
+    if (widget.guess.accepted && releaseIds.contains(widget.guess.crop)) {
       _selectedCrop = widget.guess.crop;
     }
     _loadCapabilities();
@@ -48,85 +49,74 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
   Future<void> _loadCapabilities() async {
     try {
       final capabilities = await fetchCapabilities();
+      final releaseIds = supportedCrops.map((c) => c.id).toSet();
       final options = <CropOption>[];
       for (final id in capabilities.diagnosisSupportedCrops) {
+        if (!releaseIds.contains(id)) continue;
         final crop = cropById(id);
         if (crop != null && !options.any((item) => item.id == crop.id)) {
           options.add(crop);
         }
       }
       if (!mounted || options.isEmpty) return;
-      setState(() => _diagnosisCrops = options);
+      setState(() {
+        _diagnosisCrops = options;
+        if (_selectedCrop != null && !options.any((c) => c.id == _selectedCrop)) {
+          _selectedCrop = null;
+        }
+      });
     } catch (_) {
-      // Keep the built-in four-crop fallback if the capabilities endpoint is
-      // temporarily unavailable. Diagnosis requests still enforce backend rules.
+      // Keep the four-crop V1 fallback. The backend still enforces support.
     }
   }
 
-  void _showRoadmap() {
-    final activeIds = _diagnosisCrops.map((crop) => crop.id).toSet();
-    final futureCrops = allCrops.where((crop) => !activeIds.contains(crop.id)).toList();
-
-    showModalBottomSheet<void>(
+  Future<void> _showUnsupportedCropInfo() async {
+    await showModalBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Palette.surface,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: .72,
-        minChildSize: .5,
-        maxChildSize: .9,
-        builder: (_, controller) => ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-          children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Palette.border,
-                  borderRadius: BorderRadius.circular(99),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                radius: 28,
+                backgroundColor: Palette.primarySoft,
+                child: Icon(Icons.eco_outlined, color: Palette.primary, size: 30),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                ui(
+                  'CropMedic V1 supports four crops',
+                  'CropMedic V1 inotsigira zvirimwa zvina',
+                  'CropMedic V1 isekela izilimo ezine',
+                  'CropMedic V1 ilagwasya milimo iine',
+                ),
+                style: const TextStyle(
+                  fontFamily: 'Georgia',
+                  fontSize: 25,
+                  fontWeight: FontWeight.w800,
+                  color: Palette.primaryDark,
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              ui(
-                'More crops are coming',
-                'Zvimwe zvirimwa zviri kuuya',
-                'Ezinye izilimo ziyeza',
-                'Milimo imwi ilakuboola',
+              const SizedBox(height: 8),
+              Text(
+                ui(
+                  'For this release, AI diagnosis is available for Maize, Tomato, Potato and Bell pepper only. If your crop is different, do not choose a similar-looking crop just to get a result.',
+                  'Mu release iyi AI diagnosis iripo paChibage, Madomasi, Mbatatisi neMhiripiri chete. Kana chirimwa chako chakasiyana, usasarudza chakafanana kuti uwane result.',
+                  'Kulolu hlelo ukuhlolwa nge-AI kusekela Umumbu, Utamatisi, Amazambane loUpelepele kuphela. Nxa isilimo sakho sihlukile, ungakhethi esifananayo ukuze uthole impumela.',
+                  'Mu release eeyi AI diagnosis ilagwasya Maize, Tomato, Potato a Bell pepper alikke. Naa mulimo wako wakasiyana, utasali ubonala kulingana kuti ujane mbuyanda.',
+                ),
+                style: const TextStyle(color: Palette.textDim, height: 1.45),
               ),
-              style: const TextStyle(
-                fontFamily: 'Georgia',
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: Palette.primaryDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              ui(
-                'These crops are in the CropMedic expansion roadmap, but AI diagnosis is not enabled for them yet. We will only switch them on after training and field validation.',
-                'Zvirimwa izvi zviri muhurongwa hwekuwedzera CropMedic, asi AI haisati yagadzirirwa kuzviongorora. Zvichavhurwa mushure mekudzidzisa nekuyedza muminda.',
-                'Lezi zilimo zisehlelo lokwandisa iCropMedic, kodwa ukuhlolwa nge-AI akukavulwa. Sizakuvula ngemva kokuqeqetsha lokuhlola emasimini.',
-                'Milimo eyi ili mulukwe lwaCropMedic, pele AI tayilayandulwi ino. Ilakuvulwa mwamana kujisya akuyesya muminda.',
-              ),
-              style: const TextStyle(color: Palette.textDim, height: 1.45),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: futureCrops
-                  .map((crop) => Chip(label: Text('${crop.emoji} ${crop.label(widget.lang)}')))
-                  .toList(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -134,7 +124,8 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final guessCrop = widget.guess.crop;
+    final releaseIds = supportedCrops.map((c) => c.id).toSet();
+    final guessSupported = widget.guess.accepted && releaseIds.contains(widget.guess.crop);
     final guessPercent = (widget.guess.confidence * 100).round();
 
     return Scaffold(
@@ -148,21 +139,13 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
-                      ),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
                       const Expanded(child: CropMedicBrand(compact: true, showTagline: false)),
                     ],
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    ui(
-                      'Which crop is this?',
-                      'Chirimwa chipi ichi?',
-                      'Yisiphi isilimo lesi?',
-                      'Ngomulimo nzi ooyu?',
-                    ),
+                    ui('Confirm the crop', 'Simbisa chirimwa', 'Qinisekisa isilimo', 'Sinizya mulimo'),
                     style: const TextStyle(
                       fontFamily: 'Georgia',
                       fontSize: 34,
@@ -174,10 +157,10 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                   const SizedBox(height: 8),
                   Text(
                     ui(
-                      'CropMedic first estimates the crop, then you confirm or correct it before disease diagnosis.',
-                      'CropMedic inotanga yafungidzira chirimwa, wobva wasimbisa kana kugadzirisa isati yaongorora chirwere.',
-                      'CropMedic iqala iqagele isilimo, wena usiqinisekise kumbe usilungise ingakahloli isifo.',
-                      'CropMedic itanga yabona mulimo, ulasinizya naa kuulungamya inga kayandula bulwazi.',
+                      'Crop identification and disease diagnosis are separate steps. Confirm the crop before CropMedic checks disease.',
+                      'Kuziva chirimwa nekuongorora chirwere matanho akasiyana. Simbisa chirimwa CropMedic isati yaongorora chirwere.',
+                      'Ukubona isilimo lokuhlola isifo yizinyathelo ezehlukene. Qinisekisa isilimo iCropMedic ingakahloli isifo.',
+                      'Kuziba mulimo akuyandula bulwazi matanho akasiyana. Sinizya mulimo CropMedic inga kayanduli bulwazi.',
                     ),
                     style: const TextStyle(color: Palette.textDim, fontSize: 15, height: 1.4),
                   ),
@@ -190,7 +173,7 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (widget.guess.accepted)
+                  if (guessSupported)
                     AppCard(
                       color: const Color(0xFFEAF5E9),
                       child: Row(
@@ -205,11 +188,11 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  ui('CropMedic thinks this is', 'CropMedic inofunga kuti ichi', 'CropMedic icabanga ukuthi lesi', 'CropMedic iyabona kuti ooyu'),
+                                  ui('CropMedic suggests', 'CropMedic inofungidzira', 'CropMedic iyaqagela', 'CropMedic iyabona'),
                                   style: const TextStyle(color: Palette.textDim, fontSize: 12.5),
                                 ),
                                 Text(
-                                  '$guessCrop · $guessPercent%',
+                                  '${widget.guess.crop} · $guessPercent%',
                                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 20, color: Palette.primaryDark),
                                 ),
                               ],
@@ -224,15 +207,15 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.help_outline_rounded, color: Palette.gold),
+                          const Icon(Icons.touch_app_rounded, color: Palette.gold),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               ui(
-                                'CropMedic is not confident enough to identify the crop automatically. Please choose it below.',
-                                'CropMedic haina chokwadi chakakwana. Sarudza chirimwa pazasi.',
-                                'CropMedic ayiqiniseki ngokwanele. Khetha isilimo ngezansi.',
-                                'CropMedic tayisinizyi. Sala mulimo ansi.',
+                                'Please choose one of the four supported crops below.',
+                                'Sarudza chimwe chezvirimwa zvina zvinotsigirwa pazasi.',
+                                'Khetha esinye sezilimo ezine ezisekelwayo ngezansi.',
+                                'Sala omwe wamilimo iine ilagwasigwa ansi.',
                               ),
                               style: const TextStyle(height: 1.4),
                             ),
@@ -241,18 +224,13 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                       ),
                     ),
                   const SizedBox(height: 18),
-                  Text(
-                    ui('Confirm or choose crop', 'Simbisa kana sarudza chirimwa', 'Qinisekisa kumbe khetha isilimo', 'Sinizya naa sala mulimo'),
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Palette.primaryDark),
-                  ),
-                  const SizedBox(height: 10),
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 2.25,
+                    childAspectRatio: 2.2,
                     children: _diagnosisCrops.map((crop) {
                       final selected = _selectedCrop == crop.id;
                       return InkWell(
@@ -288,26 +266,17 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   TextButton.icon(
-                    onPressed: _showRoadmap,
-                    icon: const Icon(Icons.add_circle_outline_rounded),
-                    label: Text(
-                      ui(
-                        'My crop is not listed',
-                        'Chirimwa changu hachisi pano',
-                        'Isilimo sami asikho lapha',
-                        'Mulimo wangu takuli',
-                      ),
-                    ),
+                    onPressed: _showUnsupportedCropInfo,
+                    icon: const Icon(Icons.info_outline_rounded),
+                    label: Text(ui('My crop is different', 'Chirimwa changu chakasiyana', 'Isilimo sami sihlukile', 'Mulimo wangu wakasiyana')),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 56,
                     child: FilledButton.icon(
-                      onPressed: _selectedCrop == null
-                          ? null
-                          : () => Navigator.pop(context, _selectedCrop),
+                      onPressed: _selectedCrop == null ? null : () => Navigator.pop(context, _selectedCrop),
                       style: FilledButton.styleFrom(
                         backgroundColor: Palette.primary,
                         foregroundColor: Colors.white,
@@ -319,17 +288,6 @@ class _CropConfirmationScreenState extends State<CropConfirmationScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    ui(
-                      'Automatic crop identification and disease diagnosis are separate. A crop may be available for diagnosis while still requiring you to select it manually.',
-                      'Kuziva chirimwa otomatiki nekuongorora chirwere zvinhu zvakasiyana. Chirimwa chinogona kutsigirwa pakuongorora asi uchifanira kuchisarudza nemaoko.',
-                      'Ukubona isilimo ngokuzenzakalela lokuhlola isifo kwehlukene. Isilimo singasekelwa ekuhlolweni kodwa kudingeke usikhethe wena.',
-                      'Kuziba mulimo otomatiki akuyandula bulwazi zilapalana. Mulimo inga walagwasigwa mukuyandulwa pele ulasala lwako.',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Palette.textDim, fontSize: 11.5, height: 1.35),
                   ),
                 ],
               ),

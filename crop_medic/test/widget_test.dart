@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:crop_medic/brand.dart';
+import 'package:crop_medic/crop_catalog.dart';
 
 void main() {
   testWidgets('CropMedic brand renders', (WidgetTester tester) async {
@@ -15,5 +16,13 @@ void main() {
 
     expect(find.byType(CropMedicBrand), findsOneWidget);
     expect(find.text('AI crop health assistant'), findsOneWidget);
+  });
+
+  test('CropMedic V1 exposes exactly four AI crops', () {
+    expect(
+      supportedCrops.map((crop) => crop.id).toList(),
+      equals(['Maize', 'Tomato', 'Potato', 'Bell pepper']),
+    );
+    expect(supportedCrops.every((crop) => crop.aiSupported), isTrue);
   });
 }
