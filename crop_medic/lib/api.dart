@@ -70,16 +70,26 @@ class CropGuess {
   factory CropGuess.fromJson(Map<String, dynamic> json) {
     final candidates = json['candidates'] as List<dynamic>? ?? const [];
     final supported = json['supported_crops'] as List<dynamic>? ?? const [];
+    final bootstrap = (json['bootstrap'] as bool?) ?? false;
+    final serverAccepted = (json['accepted'] as bool?) ?? false;
+    final serverMessage = json['message'] as String?;
+
+    // The current crop-identification endpoint is a bootstrap derived from the
+    // disease model, not a dedicated crop classifier. It may suggest a crop,
+    // but V1 must never auto-confirm or preselect that suggestion. The farmer
+    // explicitly chooses the crop before disease diagnosis proceeds.
     return CropGuess(
-      accepted: (json['accepted'] as bool?) ?? false,
+      accepted: serverAccepted && !bootstrap,
       crop: (json['crop'] as String?) ?? '',
       confidence: ((json['confidence'] as num?) ?? 0).toDouble(),
-      message: json['message'] as String?,
+      message: bootstrap
+          ? 'Automatic crop identification is still being validated. Please select the crop yourself.'
+          : serverMessage,
       candidates: candidates
           .map((e) => CropCandidate.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
       supportedCrops: supported.map((e) => e.toString()).toList(),
-      bootstrap: (json['bootstrap'] as bool?) ?? false,
+      bootstrap: bootstrap,
     );
   }
 }
