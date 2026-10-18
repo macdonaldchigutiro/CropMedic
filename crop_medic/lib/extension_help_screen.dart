@@ -70,7 +70,7 @@ class _ExtensionHelpScreenState extends State<ExtensionHelpScreen> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    initialValue: _province,
+                    value: _province,
                     decoration: InputDecoration(
                       labelText: _ui('Province', 'Dunhu', 'Isabelo', 'Cisi'),
                       filled: true,
